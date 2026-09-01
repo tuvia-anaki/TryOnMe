@@ -32,3 +32,8 @@ prisma/test.sqlite-journal
 # Local object storage + scratch data (never deployed)
 .data/
 debug-requests.log
+
+# Agent skills installed by the Shopify AI Toolkit (host tooling, not app code)
+.agents/
+.claude/
+skills-lock.json
