@@ -3,7 +3,7 @@
 
 client_id = "de2bb6df4fa93a082338e0276869c84f"
 name = "tryon"
-application_url = "https://shopify.dev/apps/default-app-home"
+application_url = "https://tryonme.onrender.com"
 embedded = true
 
 [access_scopes]
@@ -14,7 +14,7 @@ scopes = "read_products,read_themes"
 # Storefront requests go through the app proxy so Shopify signs them:
 # https://{shop}/apps/tryon/* -> {app_url}/proxy/*
 [app_proxy]
-url = "https://REPLACED_BY_CLI/proxy"
+url = "https://tryonme.onrender.com/proxy"
 subpath = "tryon"
 prefix = "apps"
 
@@ -42,7 +42,11 @@ api_version = "2026-10"
   compliance_topics = [ "shop/redact" ]
 
 [auth]
-redirect_urls = [ "https://shopify.dev/apps/default-app-home/api/auth" ]
+redirect_urls = [
+  "https://tryonme.onrender.com/auth/callback",
+  "https://tryonme.onrender.com/auth/shopify/callback",
+  "https://tryonme.onrender.com/api/auth/callback"
+]
 
 [build]
-automatically_update_urls_on_dev = true
+automatically_update_urls_on_dev = false
