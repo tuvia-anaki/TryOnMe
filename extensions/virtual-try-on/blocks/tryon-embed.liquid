@@ -1,0 +1,22 @@
+{% comment %}
+  Virtual Try-On app embed.
+  Loads the tiny storefront loader script. The full modal experience is
+  lazy-loaded only when a shopper clicks the Try It On button.
+{% endcomment %}
+
+<script
+  src="{{ 'tryon.js' | asset_url }}"
+  defer
+  data-tryon-loader
+  data-tryon-proxy="/apps/tryon"
+  data-tryon-modal-js="{{ 'tryon-modal.js' | asset_url }}"
+  data-tryon-modal-css="{{ 'tryon-modal.css' | asset_url }}"
+></script>
+
+{% schema %}
+{
+  "name": "Virtual Try-On",
+  "target": "body",
+  "settings": []
+}
+{% endschema %}

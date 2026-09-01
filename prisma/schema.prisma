@@ -1,0 +1,200 @@
+// Prisma schema for Virtual Try-On.
+//
+// Local development uses SQLite so the app runs with zero external services.
+// For production, switch `provider` to "postgresql", point DATABASE_URL at your
+// Postgres instance, and run `npx prisma migrate dev` to generate Postgres
+// migrations. The schema itself is compatible with both providers.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Session {
+  id                  String    @id
+  shop                String
+  state               String
+  isOnline            Boolean   @default(false)
+  scope               String?
+  expires             DateTime?
+  accessToken         String
+  userId              BigInt?
+  firstName           String?
+  lastName            String?
+  email               String?
+  accountOwner        Boolean   @default(false)
+  locale              String?
+  collaborator        Boolean?  @default(false)
+  emailVerified       Boolean?  @default(false)
+  refreshToken        String?
+  refreshTokenExpires DateTime?
+}
+
+model Shop {
+  id                  String   @id @default(cuid())
+  shopDomain          String   @unique
+  installed           Boolean  @default(true)
+  onboardingCompleted Boolean  @default(false)
+  language            String   @default("en")
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  credentials    AIProviderCredential[]
+  settings       ShopSettings?
+  widgetSettings WidgetSettings?
+  visitors       Visitor[]
+  tryOns         TryOn[]
+  usageEvents    UsageEvent[]
+  analyticsEvents AnalyticsEvent[]
+}
+
+model AIProviderCredential {
+  id              String   @id @default(cuid())
+  shopId          String
+  provider        String // "openai" | "gemini" | "xai"
+  encryptedApiKey String
+  maskedKey       String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@unique([shopId, provider])
+}
+
+model ShopSettings {
+  shopId                  String  @id
+  provider                String? // active provider id
+  model                   String? // active model id
+  quality                 String  @default("medium")
+  visitorDailyLimit       Int     @default(3) // 0 = unlimited
+  shopDailyLimit          Int     @default(500)
+  productAvailabilityMode String  @default("all") // "all" | "include" | "exclude"
+  productSelectionJson    String  @default("[]") // JSON array of product GIDs
+  retentionDays           Int     @default(90)
+
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+}
+
+model WidgetSettings {
+  shopId          String  @id
+  buttonText      String  @default("Try It On")
+  buttonStyle     String  @default("solid") // "solid" | "outline"
+  backgroundColor String  @default("#111111")
+  textColor       String  @default("#ffffff")
+  borderRadius    Int     @default(10)
+  fullWidth       Boolean @default(false)
+  iconEnabled     Boolean @default(true)
+  hoverAnimation  String  @default("none") // "none" | "darken" | "lift" | "grow"
+  buttonSize      String  @default("medium") // "small" | "medium" | "large"
+
+  modalTitle           String @default("Try It On")
+  modalSubtitle        String @default("See how it looks on you")
+  modalBackgroundColor String @default("#ffffff")
+  modalTextColor       String @default("#111111")
+  modalAccentColor     String @default("#111111")
+  modalBorderRadius    Int    @default(18)
+
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+}
+
+// Storefront funnel events for conversion analytics. `triedOn` snapshots
+// whether the visitor had a try-on for that product when the event happened.
+model AnalyticsEvent {
+  id        String   @id @default(cuid())
+  shopId    String
+  visitorId String?
+  productId String
+  type      String // "view" | "add_to_cart"
+  triedOn   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@index([shopId, type, createdAt])
+}
+
+model Visitor {
+  id                 String   @id @default(cuid())
+  shopId             String
+  anonymousTokenHash String
+  createdAt          DateTime @default(now())
+  lastSeenAt         DateTime @default(now())
+
+  shop   Shop           @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  photos VisitorPhoto[]
+  tryOns TryOn[]
+
+  @@unique([shopId, anonymousTokenHash])
+}
+
+model VisitorPhoto {
+  id         String   @id @default(cuid())
+  visitorId  String
+  storageKey String
+  width      Int?
+  height     Int?
+  createdAt  DateTime @default(now())
+
+  visitor Visitor @relation(fields: [visitorId], references: [id], onDelete: Cascade)
+  tryOns  TryOn[]
+}
+
+model TryOn {
+  id                       String    @id @default(cuid())
+  shopId                   String
+  visitorId                String
+  visitorPhotoId           String
+  productId                String // numeric Shopify product id as string
+  variantId                String?
+  productTitle             String
+  productImageUrl          String
+  provider                 String
+  model                    String
+  quality                  String    @default("medium")
+  status                   String    @default("queued") // queued | processing | completed | failed
+  generatedImageStorageKey String?
+  estimatedCost            Float?
+  errorCode                String? // invalid_key | quota | content_rejected | provider_error | internal
+  errorMessage             String? // internal detail, never shown to shoppers verbatim
+  createdAt                DateTime  @default(now())
+  completedAt              DateTime?
+
+  shop     Shop            @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  visitor  Visitor         @relation(fields: [visitorId], references: [id], onDelete: Cascade)
+  photo    VisitorPhoto    @relation(fields: [visitorPhotoId], references: [id], onDelete: Cascade)
+  feedback TryOnFeedback[]
+
+  @@index([shopId, createdAt])
+  @@index([visitorId, createdAt])
+}
+
+model TryOnFeedback {
+  id        String   @id @default(cuid())
+  tryOnId   String
+  rating    String // "up" | "down"
+  createdAt DateTime @default(now())
+
+  tryOn TryOn @relation(fields: [tryOnId], references: [id], onDelete: Cascade)
+
+  @@unique([tryOnId])
+}
+
+model UsageEvent {
+  id            String   @id @default(cuid())
+  shopId        String
+  visitorId     String?
+  tryOnId       String?
+  provider      String
+  model         String
+  estimatedCost Float?
+  createdAt     DateTime @default(now())
+
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@index([shopId, createdAt])
+}

@@ -1,0 +1,288 @@
+/* Virtual Try-On modal — right-side drawer on desktop, full sheet on mobile. */
+
+.tryon-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  background: rgba(15, 15, 15, 0.45);
+  backdrop-filter: blur(2px);
+  display: flex;
+  justify-content: flex-end;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.tryon-overlay.is-open { opacity: 1; }
+
+.tryon-drawer {
+  width: min(440px, 100%);
+  height: 100%;
+  background: var(--tryon-modal-bg, #ffffff);
+  color: var(--tryon-modal-text, #111111);
+  display: flex;
+  flex-direction: column;
+  box-shadow: -12px 0 40px rgba(0, 0, 0, 0.18);
+  transform: translateX(24px);
+  transition: transform 0.22s ease;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  border-radius: var(--tryon-modal-radius, 18px) 0 0 var(--tryon-modal-radius, 18px);
+  overflow: hidden;
+}
+.tryon-overlay.is-open .tryon-drawer { transform: translateX(0); }
+
+@media (max-width: 640px) {
+  .tryon-overlay { align-items: flex-end; }
+  .tryon-drawer {
+    width: 100%;
+    height: 96%;
+    border-radius: var(--tryon-modal-radius, 18px) var(--tryon-modal-radius, 18px) 0 0;
+    transform: translateY(24px);
+  }
+  .tryon-overlay.is-open .tryon-drawer { transform: translateY(0); }
+}
+
+.tryon-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 20px 20px 6px;
+}
+.tryon-head__titles { text-align: center; flex: 1; padding-top: 4px; }
+.tryon-head__title { font-size: 19px; font-weight: 700; margin: 0; letter-spacing: -0.01em; }
+.tryon-head__subtitle { font-size: 13px; color: #6b6b6b; margin: 3px 0 0; }
+.tryon-iconbtn {
+  appearance: none;
+  border: none;
+  background: #f4f4f4;
+  color: #111;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.12s ease;
+}
+.tryon-iconbtn:hover { background: #e9e9e9; }
+
+.tryon-steps {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 0 2px;
+}
+.tryon-steps__dot {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #f0f0f0;
+  color: #9a9a9a;
+  font-size: 12px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.tryon-steps__dot.is-active { background: var(--tryon-modal-accent, #111); color: #fff; }
+.tryon-steps__line { width: 42px; height: 2px; background: #e7e7e7; border-radius: 2px; }
+
+.tryon-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 24px 18px;
+  display: flex;
+  flex-direction: column;
+}
+
+.tryon-view { display: flex; flex-direction: column; align-items: center; text-align: center; flex: 1; }
+.tryon-view h3 { font-size: 17px; font-weight: 700; margin: 14px 0 6px; }
+.tryon-view p.tryon-muted { font-size: 13.5px; color: #6b6b6b; margin: 0 0 14px; line-height: 1.45; }
+
+.tryon-product-thumb {
+  width: 132px;
+  height: 132px;
+  border-radius: 14px;
+  object-fit: cover;
+  border: 1px solid #ececec;
+  background: #fafafa;
+  margin: 6px 0 18px;
+}
+
+.tryon-cta {
+  appearance: none;
+  width: 100%;
+  border: 1.5px solid var(--tryon-modal-accent, #111);
+  background: var(--tryon-modal-accent, #111);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  border-radius: 12px;
+  padding: 15px 18px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 10px;
+  transition: opacity 0.12s ease, transform 0.12s ease;
+  font-family: inherit;
+}
+.tryon-cta:hover { opacity: 0.92; }
+.tryon-cta:disabled { opacity: 0.5; cursor: default; }
+.tryon-cta--ghost { background: #fff; color: #111; border-color: #d9d9d9; }
+.tryon-cta--ghost:hover { border-color: var(--tryon-modal-accent, #111); opacity: 1; }
+.tryon-textbtn {
+  appearance: none;
+  background: none;
+  border: none;
+  color: #6b6b6b;
+  font-size: 13px;
+  text-decoration: underline;
+  cursor: pointer;
+  margin-top: 14px;
+  font-family: inherit;
+}
+
+.tryon-fineprint {
+  font-size: 11.5px;
+  color: #9a9a9a;
+  text-align: center;
+  padding: 10px 24px 16px;
+  line-height: 1.45;
+}
+
+.tryon-photo-preview {
+  width: 100%;
+  max-height: 46vh;
+  object-fit: contain;
+  border-radius: 14px;
+  background: #f6f6f6;
+  border: 1px solid #ececec;
+}
+
+/* Generating */
+.tryon-gen-thumbs { display: flex; align-items: center; gap: 14px; margin: 22px 0 8px; }
+.tryon-gen-thumbs img {
+  width: 84px;
+  height: 84px;
+  border-radius: 12px;
+  object-fit: cover;
+  border: 1px solid #ececec;
+}
+.tryon-gen-plus { font-size: 18px; color: #9a9a9a; }
+.tryon-spinner {
+  width: 34px;
+  height: 34px;
+  margin: 18px auto 4px;
+  border-radius: 50%;
+  border: 3px solid #ececec;
+  border-top-color: var(--tryon-modal-accent, #111);
+  animation: tryon-spin 0.9s linear infinite;
+}
+@keyframes tryon-spin { to { transform: rotate(360deg); } }
+.tryon-gen-status { font-size: 13.5px; color: #6b6b6b; min-height: 20px; }
+.tryon-shimmer {
+  width: 100%;
+  height: 260px;
+  border-radius: 14px;
+  background: linear-gradient(100deg, #f3f3f3 40%, #ececec 50%, #f3f3f3 60%);
+  background-size: 200% 100%;
+  animation: tryon-shimmer 1.4s ease infinite;
+  margin-bottom: 16px;
+}
+@keyframes tryon-shimmer { to { background-position: -200% 0; } }
+
+/* Result */
+.tryon-result-img {
+  width: 100%;
+  max-height: 52vh;
+  object-fit: contain;
+  border-radius: 14px;
+  background: #f6f6f6;
+  border: 1px solid #ececec;
+}
+.tryon-result-title { font-size: 15px; font-weight: 600; margin: 14px 0 2px; }
+.tryon-row { display: flex; gap: 10px; width: 100%; margin-top: 10px; }
+.tryon-row .tryon-cta { flex: 1; margin-top: 0; }
+.tryon-feedback { display: flex; align-items: center; gap: 10px; margin-top: 16px; font-size: 13px; color: #6b6b6b; }
+.tryon-feedback button {
+  appearance: none;
+  border: 1px solid #e2e2e2;
+  background: #fff;
+  border-radius: 999px;
+  padding: 7px 13px;
+  font-size: 13px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+.tryon-feedback button:hover { border-color: var(--tryon-modal-accent, #111); }
+.tryon-feedback button.is-selected { background: var(--tryon-modal-accent, #111); color: #fff; border-color: var(--tryon-modal-accent, #111); }
+
+/* History */
+.tryon-history-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  width: 100%;
+  margin-top: 8px;
+}
+.tryon-history-card {
+  border: 1px solid #ececec;
+  border-radius: 14px;
+  overflow: hidden;
+  cursor: pointer;
+  background: #fff;
+  text-align: left;
+  padding: 0;
+  font-family: inherit;
+  transition: box-shadow 0.12s ease;
+}
+.tryon-history-card:hover { box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1); }
+.tryon-history-card img { width: 100%; aspect-ratio: 3 / 4; object-fit: cover; display: block; }
+.tryon-history-card .meta { padding: 8px 10px 10px; }
+.tryon-history-card .meta .t { font-size: 12.5px; font-weight: 600; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tryon-history-card .meta .d { font-size: 11px; color: #9a9a9a; }
+
+/* Camera */
+.tryon-video {
+  width: 100%;
+  border-radius: 14px;
+  background: #111;
+  max-height: 50vh;
+  transform: scaleX(-1);
+}
+
+.tryon-error-icon, .tryon-success-icon { font-size: 34px; margin-top: 24px; }
+
+.tryon-toast {
+  position: absolute;
+  left: 50%;
+  bottom: 22px;
+  transform: translateX(-50%);
+  background: var(--tryon-modal-accent, #111);
+  color: #fff;
+  font-size: 13px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.tryon-toast.is-visible { opacity: 1; }
+
+/* Themes often attach global hover effects (zoom, fade, lift) to images.
+   Inside the try-on window those look broken — neutralize them. */
+.tryon-drawer img,
+.tryon-drawer img:hover {
+  transition: none !important;
+  transform: none !important;
+  filter: none !important;
+  opacity: 1 !important;
+  animation: none !important;
+  box-shadow: none !important;
+}

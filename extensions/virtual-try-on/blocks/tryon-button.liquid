@@ -1,0 +1,68 @@
+{% comment %}
+  Virtual Try-On product-page app block.
+  Renders the "Try It On" button. Appearance is controlled from the app's
+  Design page; the button reveals itself once the loader confirms try-on is
+  enabled for this product.
+{% endcomment %}
+
+{{ 'tryon-button.css' | asset_url | stylesheet_tag }}
+
+{%- if product -%}
+  {%- capture tryon_product_json -%}
+    {
+      "id": {{ product.id | json }},
+      "title": {{ product.title | json }},
+      "type": {{ product.type | json }},
+      "vendor": {{ product.vendor | json }},
+      "url": {{ product.url | json }},
+      "featuredImage": {{ product.featured_image | image_url: width: 900 | json }},
+      "selectedVariantId": {{ product.selected_or_first_available_variant.id | json }},
+      "variants": [
+        {%- for variant in product.variants -%}
+          {
+            "id": {{ variant.id | json }},
+            "title": {{ variant.title | json }},
+            "available": {{ variant.available | json }},
+            "image": {% if variant.image %}{{ variant.image | image_url: width: 900 | json }}{% else %}null{% endif %}
+          }{%- unless forloop.last -%},{%- endunless -%}
+        {%- endfor -%}
+      ]
+    }
+  {%- endcapture -%}
+
+  <div
+    class="tryon-block"
+    data-tryon-root
+    data-tryon-align="{{ block.settings.alignment }}"
+    {{ block.shopify_attributes }}
+  >
+    <script type="application/json" data-tryon-product>{{ tryon_product_json }}</script>
+    <button type="button" class="tryon-btn" data-tryon-button hidden>
+      <span class="tryon-btn__icon" data-tryon-icon aria-hidden="true">&#10022;</span>
+      <span class="tryon-btn__label" data-tryon-label>Try It On</span>
+    </button>
+  </div>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "Try-On Button",
+  "target": "section",
+  "enabled_on": {
+    "templates": ["product"]
+  },
+  "settings": [
+    {
+      "type": "select",
+      "id": "alignment",
+      "label": "Alignment",
+      "default": "left",
+      "options": [
+        { "value": "left", "label": "Left" },
+        { "value": "center", "label": "Center" },
+        { "value": "right", "label": "Right" }
+      ]
+    }
+  ]
+}
+{% endschema %}

@@ -1,0 +1,48 @@
+# Shopify app configuration for Virtual Try-On ("tryon" app).
+# application_url / redirect_urls are auto-updated by `npm run dev`.
+
+client_id = "de2bb6df4fa93a082338e0276869c84f"
+name = "tryon"
+application_url = "https://shopify.dev/apps/default-app-home"
+embedded = true
+
+[access_scopes]
+# read_products: validate storefront try-on requests + product picker
+# read_themes: detect app embed / app block installation state during onboarding
+scopes = "read_products,read_themes"
+
+# Storefront requests go through the app proxy so Shopify signs them:
+# https://{shop}/apps/tryon/* -> {app_url}/proxy/*
+[app_proxy]
+url = "https://REPLACED_BY_CLI/proxy"
+subpath = "tryon"
+prefix = "apps"
+
+[webhooks]
+api_version = "2026-10"
+
+  [[webhooks.subscriptions]]
+  uri = "/webhooks/app/uninstalled"
+  topics = [ "app/uninstalled" ]
+
+  [[webhooks.subscriptions]]
+  uri = "/webhooks/app/scopes_update"
+  topics = [ "app/scopes_update" ]
+
+  [[webhooks.subscriptions]]
+  uri = "/webhooks/customers/data_request"
+  compliance_topics = [ "customers/data_request" ]
+
+  [[webhooks.subscriptions]]
+  uri = "/webhooks/customers/redact"
+  compliance_topics = [ "customers/redact" ]
+
+  [[webhooks.subscriptions]]
+  uri = "/webhooks/shop/redact"
+  compliance_topics = [ "shop/redact" ]
+
+[auth]
+redirect_urls = [ "https://shopify.dev/apps/default-app-home/api/auth" ]
+
+[build]
+automatically_update_urls_on_dev = true
