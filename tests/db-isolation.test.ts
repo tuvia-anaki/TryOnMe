@@ -9,8 +9,10 @@ import {
 import { createTryOnJob } from "../app/lib/jobs.server";
 import type { ValidatedProduct } from "../app/lib/products.server";
 
+const HAS_DB = Boolean(process.env.TEST_DATABASE_URL);
+
 /**
- * Integration tests against a scratch SQLite database (see global-setup):
+ * Integration tests against a scratch PostgreSQL database (see global-setup):
  * shop isolation, visitor ownership, usage limits, duplicate protection,
  * job state transitions and privacy deletion.
  */
@@ -63,7 +65,7 @@ beforeAll(async () => {
   shop2 = await makeShop("two.myshopify.com");
 });
 
-describe("visitor identity and shop isolation", () => {
+describe.skipIf(!HAS_DB)("visitor identity and shop isolation", () => {
   it("stores only a token hash", async () => {
     const visitor = await findOrCreateVisitor(shop1.id, TOKEN_A);
     expect(visitor).not.toBeNull();
@@ -88,7 +90,7 @@ describe("visitor identity and shop isolation", () => {
   });
 });
 
-describe("try-on job creation", () => {
+describe.skipIf(!HAS_DB)("try-on job creation", () => {
   it("requires a configured provider", async () => {
     const bare = await prisma.shop.create({ data: { shopDomain: "bare.myshopify.com" } });
     await prisma.shopSettings.create({ data: { shopId: bare.id } });
@@ -162,7 +164,7 @@ describe("try-on job creation", () => {
   });
 });
 
-describe("privacy deletion", () => {
+describe.skipIf(!HAS_DB)("privacy deletion", () => {
   it("removes a visitor's photos and try-ons", async () => {
     const visitor = await findOrCreateVisitor(shop2.id, TOKEN_B);
     await makePhoto(visitor!.id);

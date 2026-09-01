@@ -6,7 +6,7 @@ export default defineConfig({
     environment: "node",
     globalSetup: "./tests/global-setup.ts",
     env: {
-      DATABASE_URL: "file:./test.sqlite",
+      DATABASE_URL: process.env.TEST_DATABASE_URL ?? "postgresql://unset",
       ENCRYPTION_KEY: "YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE=",
       STORAGE_DRIVER: "local",
       STORAGE_LOCAL_DIR: ".data/test-storage",
