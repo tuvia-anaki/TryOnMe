@@ -128,9 +128,12 @@
       var script = document.createElement("script");
       script.src = MODAL_JS;
       script.onload = function () {
-        window.TryOnModal ? resolve(window.TryOnModal) : reject(new Error("modal missing"));
+        if (window.TryOnModal) return resolve(window.TryOnModal);
+        reject(new Error("Try-on modal script loaded but did not initialise."));
       };
-      script.onerror = function () { reject(new Error("modal load failed")); };
+      script.onerror = function () {
+        reject(new Error("Failed to load try-on modal script: " + MODAL_JS));
+      };
       document.head.appendChild(script);
     });
     return modalLoadPromise;
@@ -147,9 +150,21 @@
       encodeURIComponent(firstProduct && firstProduct.id ? firstProduct.id : "");
 
     fetch(configUrl, { headers: { Accept: "application/json" } })
-      .then(function (res) { return res.ok ? res.json() : null; })
+      .then(function (res) {
+        if (!res.ok) {
+          console.error("[Virtual Try-On] Config request failed:", res.status, configUrl);
+          return null;
+        }
+        return res.json();
+      })
       .then(function (cfg) {
-        if (!cfg || !cfg.enabled) return;
+        if (!cfg) return;
+        if (!cfg.enabled) {
+          console.info(
+            "[Virtual Try-On] Disabled for this product — check that an AI provider is connected in the app and that try-on is enabled for this product."
+          );
+          return;
+        }
         if (firstProduct && firstProduct.id) {
           sendEvent("view", firstProduct.id);
           trackAddToCart(firstProduct.id);
@@ -171,12 +186,18 @@
                   config: cfg,
                 });
               })
-              .catch(function () {})
+              .catch(function (error) {
+                // Surface it: a silent failure looks like a dead button.
+                console.error("[Virtual Try-On] Couldn't open the try-on window:", error);
+                window.alert("Sorry — the try-on window couldn't open. Please refresh and try again.");
+              })
               .then(function () { btn.disabled = false; });
           });
         });
       })
-      .catch(function () {});
+      .catch(function (error) {
+        console.error("[Virtual Try-On] Could not reach the app:", error);
+      });
   }
 
   if (document.readyState === "loading") {
