@@ -12,6 +12,8 @@ export interface PromptProductInfo {
   vendor?: string;
   variantTitle?: string;
   description?: string;
+  /** How many views of the product are attached (1 = primary image only). */
+  referenceImageCount?: number;
 }
 
 type Category =
@@ -100,6 +102,14 @@ export function buildTryOnPrompt(info: PromptProductInfo): string {
     info.description ? `PRODUCT NOTES: ${sanitize(info.description, 280)}` : null,
   ].filter(Boolean);
 
+  const multiView =
+    (info.referenceImageCount ?? 1) > 1
+      ? [
+          `You are given ${info.referenceImageCount} photographs of the SAME product from different angles or distances. They are one single item, not several products. Study all of them together to understand the true colour, print placement, construction and proportions, then reproduce that item exactly. Where the views disagree because of lighting, trust the clearest, best-lit view.`,
+          "",
+        ]
+      : [];
+
   return [
     "This is a strict photo-editing task, not image generation. The first image is the shopper's own photograph and it is the base image.",
     "",
@@ -113,7 +123,15 @@ export function buildTryOnPrompt(info: PromptProductInfo): string {
     "",
     CATEGORY_GUIDANCE[category],
     "",
-    "The product itself is extremely important. Preserve its design, color, material, graphics, logos, texture, shape, proportions and distinctive details exactly as shown in the second image. Do not redesign the product.",
+    ...multiView,
+    "THE PRODUCT MUST BE COPIED EXACTLY, NOT REDRAWN. Treat the product image(s) as the ground truth and reproduce the item feature by feature:",
+    "- Exact colour and shade, including any colour blocking, gradient or two-tone panels.",
+    "- Exact pattern or print: the same motif, at the same scale, in the same position on the garment. Do not restyle, resize, repeat, mirror or relocate a print.",
+    "- Every graphic, logo, badge, label and piece of text: identical wording, spelling, typeface, colour and placement. Never invent, translate, complete or 'tidy up' text or a logo. If lettering is unclear in the reference, reproduce it as it appears rather than guessing at new words.",
+    "- Exact construction details: neckline shape, collar, lapels, buttons and their number and spacing, zips, pockets, seams, stitching colour, cuffs, hem length, sleeve length, straps, ties, belts, ruffles, slits, embroidery, sequins, hardware and trim.",
+    "- Exact material and finish: weave or knit texture, sheen, transparency, drape and stiffness.",
+    "- Exact proportions and silhouette relative to the body.",
+    "Do not add, remove, simplify or embellish any feature of the product. Do not substitute a similar-looking item. If a detail is hidden in the reference images, keep it plausible and minimal rather than inventing something decorative.",
     "",
     "Only the minimal region where the product sits may change. The result must look like the very same photograph of the very same person, with the supplied product realistically added — natural anatomy, fabric folds, shadows, perspective, occlusion and lighting consistent with the original photo.",
     "",

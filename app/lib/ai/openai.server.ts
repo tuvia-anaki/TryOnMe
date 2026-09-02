@@ -105,11 +105,15 @@ export const openaiProvider: AIProvider = {
       new Blob([new Uint8Array(input.personImage.data)], { type: input.personImage.contentType }),
       "person.jpg",
     );
-    form.append(
-      "image[]",
-      new Blob([new Uint8Array(input.productImage.data)], { type: input.productImage.contentType }),
-      "product.jpg",
-    );
+    // Every available view of the product: extra angles stop the model from
+    // inventing detail it can't see in a single photo.
+    input.productImages.forEach((image, index) => {
+      form.append(
+        "image[]",
+        new Blob([new Uint8Array(image.data)], { type: image.contentType }),
+        `product-${index + 1}.jpg`,
+      );
+    });
 
     const res = await fetch(`${OPENAI_BASE}/images/edits`, {
       method: "POST",

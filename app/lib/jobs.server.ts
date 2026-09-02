@@ -79,6 +79,7 @@ export async function createTryOnJob(params: {
       variantId: product.variantId,
       productTitle: product.title,
       productImageUrl: product.imageUrl,
+      productImageUrlsJson: JSON.stringify(product.imageUrls ?? [product.imageUrl]),
       provider: settings.provider,
       model: settings.model,
       quality: settings.quality,
@@ -185,11 +186,22 @@ export async function runTryOnJob(
     if (!provider?.implemented) return fail("provider_error", "Provider not implemented.");
 
     const apiKey = decryptSecret(credential.encryptedApiKey);
-    const [personImage, productImage] = await Promise.all([
+    // Every stored view of the product, so the model can see the design from
+    // more than one angle. Falls back to the primary image for older jobs.
+    let productImageUrls: string[] = [];
+    try {
+      const parsed = JSON.parse(tryOn.productImageUrlsJson || "[]");
+      if (Array.isArray(parsed)) productImageUrls = parsed.filter((u) => typeof u === "string");
+    } catch {
+      productImageUrls = [];
+    }
+    if (productImageUrls.length === 0) productImageUrls = [tryOn.productImageUrl];
+
+    const [personImage, ...productImages] = await Promise.all([
       storage()
         .get(tryOn.photo.storageKey)
         .then((data) => ({ data, contentType: "image/jpeg" })),
-      fetchProductImage(tryOn.productImageUrl),
+      ...productImageUrls.map((url) => fetchProductImage(url)),
     ]);
 
     const prompt = buildTryOnPrompt({
@@ -198,6 +210,7 @@ export async function runTryOnJob(
       vendor: productInfo.vendor,
       variantTitle: productInfo.variantTitle ?? undefined,
       description: productInfo.description,
+      referenceImageCount: productImages.length,
     });
 
     const result = await Promise.race([
@@ -206,7 +219,7 @@ export async function runTryOnJob(
         modelId: getModel(tryOn.provider as any, tryOn.model)?.apiModelId ?? tryOn.model,
         quality: tryOn.quality,
         personImage,
-        productImage,
+        productImages,
         prompt,
       }),
       new Promise<never>((_, reject) =>

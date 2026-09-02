@@ -81,7 +81,7 @@ export const vertexProvider: AIProvider = {
             },
             productImages: [
               {
-                image: { bytesBase64Encoded: input.productImage.data.toString("base64") },
+                image: { bytesBase64Encoded: input.productImages[0].data.toString("base64") },
               },
             ],
           },

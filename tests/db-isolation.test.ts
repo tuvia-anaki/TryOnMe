@@ -26,6 +26,7 @@ const product: ValidatedProduct = {
   description: "",
   variantTitle: null,
   imageUrl: "https://cdn.shopify.com/s/files/1/does-not-exist.jpg",
+  imageUrls: ["https://cdn.shopify.com/s/files/1/does-not-exist.jpg"],
 };
 
 async function makeShop(domain: string, visitorDailyLimit = 3) {

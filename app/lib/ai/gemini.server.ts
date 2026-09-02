@@ -126,13 +126,20 @@ async function geminiGenerateOnce(input: GenerateTryOnInput): Promise<GenerateTr
                     data: input.personImage.data.toString("base64"),
                   },
                 },
-                { text: "PHOTO B — the product:" },
-                {
-                  inlineData: {
-                    mimeType: input.productImage.contentType,
-                    data: input.productImage.data.toString("base64"),
+                ...input.productImages.flatMap((image, index) => [
+                  {
+                    text:
+                      index === 0
+                        ? "PHOTO B — the product (primary view):"
+                        : `PHOTO B${index + 1} — the SAME product, another view (use it to get the design exactly right):`,
                   },
-                },
+                  {
+                    inlineData: {
+                      mimeType: image.contentType,
+                      data: image.data.toString("base64"),
+                    },
+                  },
+                ]),
                 {
                   text:
                     "TASK: Edit PHOTO A so that this exact person is now wearing/using the product from PHOTO B. " +

@@ -403,9 +403,27 @@
 
   function viewResult(result) {
     var view = el("div", "tryon-view");
+
+    // Show a placeholder until the image actually decodes, and say something
+    // useful if it never does (expired link, deleted file) instead of hanging.
+    var shimmer = el("div", "tryon-shimmer");
+    view.appendChild(shimmer);
+
     var img = el("img", "tryon-result-img");
-    img.src = result.resultUrl;
+    img.style.display = "none";
     img.alt = "Your virtual try-on";
+    img.onload = function () {
+      shimmer.remove();
+      img.style.display = "";
+    };
+    img.onerror = function () {
+      shimmer.remove();
+      img.remove();
+      console.error("[Virtual Try-On] Result image failed to load:", result.resultUrl);
+      var failed = el("p", "tryon-muted", "This try-on is no longer available. Please create a new one.");
+      view.insertBefore(failed, view.firstChild);
+    };
+    img.src = result.resultUrl;
     view.appendChild(img);
     view.appendChild(el("p", "tryon-result-title", result.productTitle || ctx.product.title || ""));
 

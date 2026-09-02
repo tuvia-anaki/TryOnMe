@@ -19,7 +19,10 @@ export interface ValidatedProduct {
   vendor: string;
   description: string;
   variantTitle: string | null;
+  /** Primary reference image (the selected variant's, when it has one). */
   imageUrl: string;
+  /** Primary image first, then other views of the same product. */
+  imageUrls: string[];
 }
 
 const PRODUCT_QUERY = `#graphql
@@ -32,6 +35,7 @@ const PRODUCT_QUERY = `#graphql
       description
       status
       featuredImage { url }
+      images(first: 8) { nodes { url } }
       variants(first: 100) {
         nodes {
           id
@@ -42,6 +46,9 @@ const PRODUCT_QUERY = `#graphql
     }
   }
 `;
+
+/** How many product views to send the AI. More context, more tokens/cost. */
+export const MAX_PRODUCT_REFERENCE_IMAGES = 4;
 
 export function isNumericId(value: unknown): value is string {
   return typeof value === "string" && /^\d{1,20}$/.test(value);
@@ -73,6 +80,17 @@ export async function validateProduct(
   const imageUrl = variant?.image?.url || product.featuredImage?.url || null;
   if (!imageUrl) return null;
 
+  // Extra angles/details of the SAME product materially improve fidelity:
+  // the model sees the print placement, trim and back/side detail it would
+  // otherwise have to invent. Primary image first, deduped, capped.
+  const galleryUrls: string[] = (product.images?.nodes ?? [])
+    .map((n: { url?: string }) => n?.url)
+    .filter((u: unknown): u is string => typeof u === "string");
+  const imageUrls = [imageUrl, product.featuredImage?.url, ...galleryUrls]
+    .filter((u): u is string => typeof u === "string" && isShopifyCdnUrl(u))
+    .filter((u, i, all) => all.indexOf(u) === i)
+    .slice(0, MAX_PRODUCT_REFERENCE_IMAGES);
+
   return {
     productId,
     variantId,
@@ -82,6 +100,7 @@ export async function validateProduct(
     description: product.description ?? "",
     variantTitle: variant?.title ?? null,
     imageUrl,
+    imageUrls,
   };
 }
 

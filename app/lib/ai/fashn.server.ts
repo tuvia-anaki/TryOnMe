@@ -67,12 +67,12 @@ export const fashnProvider: AIProvider = {
             ? {
                 // tryon-max schema: person + product image, no tuning knobs.
                 model_image: toDataUri(input.personImage.data, input.personImage.contentType),
-                product_image: toDataUri(input.productImage.data, input.productImage.contentType),
+                product_image: toDataUri(input.productImages[0].data, input.productImages[0].contentType),
                 output_format: "png",
               }
             : {
                 model_image: toDataUri(input.personImage.data, input.personImage.contentType),
-                garment_image: toDataUri(input.productImage.data, input.productImage.contentType),
+                garment_image: toDataUri(input.productImages[0].data, input.productImages[0].contentType),
                 // Best-quality settings: slower but noticeably better output.
                 mode: "quality",
                 category: "auto",

@@ -30,7 +30,8 @@ describe("prompt building", () => {
     expect(prompt).toContain("keep exactly that framing");
     expect(prompt).toContain("zoom out and realistically extend the same photograph");
     expect(prompt).toContain("Never return the photograph with the product missing or unchanged");
-    expect(prompt).toContain("Do not redesign the product");
+    expect(prompt).toContain("THE PRODUCT MUST BE COPIED EXACTLY, NOT REDRAWN");
+    expect(prompt).toContain("Do not add, remove, simplify or embellish any feature");
     expect(prompt).toContain("PRODUCT NAME: Blue Hoodie");
   });
 
@@ -41,7 +42,16 @@ describe("prompt building", () => {
     });
     expect(prompt).not.toContain("<b>");
     expect(prompt).toContain("Nice shirt");
-    expect(prompt.length).toBeLessThan(3000);
+    expect(prompt.length).toBeLessThan(4500);
+  });
+
+  it("tells the model that extra images are the same product", () => {
+    const single = buildTryOnPrompt({ title: "Shirt", referenceImageCount: 1 });
+    expect(single).not.toContain("photographs of the SAME product");
+
+    const multi = buildTryOnPrompt({ title: "Shirt", referenceImageCount: 3 });
+    expect(multi).toContain("3 photographs of the SAME product");
+    expect(multi).toContain("one single item, not several products");
   });
 
   it("frames product data as data, not instructions", () => {

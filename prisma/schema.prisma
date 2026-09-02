@@ -153,6 +153,7 @@ model TryOn {
   variantId                String?
   productTitle             String
   productImageUrl          String
+  productImageUrlsJson     String    @default("[]") // all reference views sent to the AI
   provider                 String
   model                    String
   quality                  String    @default("medium")

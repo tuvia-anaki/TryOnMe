@@ -50,8 +50,11 @@ export interface GenerateTryOnInput {
   quality: string;
   /** Shopper photograph (JPEG/PNG bytes). */
   personImage: { data: Buffer; contentType: string };
-  /** Product reference image bytes. */
-  productImage: { data: Buffer; contentType: string };
+  /**
+   * Product reference images, primary view first. Providers that accept
+   * multiple references should send them all; single-image providers use [0].
+   */
+  productImages: Array<{ data: Buffer; contentType: string }>;
   /** Server-built prompt. Never comes from the storefront. */
   prompt: string;
 }
