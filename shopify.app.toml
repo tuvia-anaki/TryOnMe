@@ -15,7 +15,6 @@ embedded = true
 # One app serves both production and the dev store: don't let `shopify app dev`
 # repoint the live app at a temporary tunnel.
 automatically_update_urls_on_dev = false
-include_config_on_deploy = true
 
 [access_scopes]
 # read/write_products: read variants + media, save variant image assignments
