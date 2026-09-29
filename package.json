@@ -1,83 +1,46 @@
 {
-  "name": "virtual-try-on",
+  "name": "prism-variant-images",
+  "version": "1.0.0",
   "private": true,
-  "scripts": {
-    "build": "remix vite:build",
-    "dev": "shopify app dev",
-    "config:link": "shopify app config link",
-    "generate": "shopify app generate",
-    "deploy": "shopify app deploy",
-    "config:use": "shopify app config use",
-    "env": "shopify app env",
-    "start": "remix-serve ./build/server/index.js",
-    "docker-start": "npm run setup && npm run start",
-    "setup": "prisma generate && prisma migrate deploy",
-    "lint": "eslint --cache --cache-location ./node_modules/.cache/eslint .",
-    "shopify": "shopify",
-    "prisma": "prisma",
-    "graphql-codegen": "graphql-codegen",
-    "vite": "vite",
-    "test": "vitest run",
-    "test:watch": "vitest"
-  },
   "type": "module",
   "engines": {
-    "node": ">=20.19 <22 || >=22.12"
+    "node": ">=20.19"
+  },
+  "scripts": {
+    "dev": "shopify app dev",
+    "dev:web": "node scripts/dev-web.mjs",
+    "build": "npm run build:storefront && npm run build:admin && npm run build:server",
+    "build:admin": "vite build",
+    "build:storefront": "node scripts/build-storefront.mjs",
+    "build:server": "esbuild src/server/node.ts --bundle --platform=node --format=esm --target=node20 --outfile=build/server.mjs --log-level=warning",
+    "setup": "node -e \"\"",
+    "start": "node build/server.mjs",
+    "deploy": "node scripts/check-app-url.mjs && npm run build:storefront && shopify app deploy",
+    "deploy:worker": "npm run build && wrangler deploy",
+    "config:link": "shopify app config link",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p extensions/product-block/tsconfig.json && tsc --noEmit -p extensions/bulk-action/tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "harness": "node scripts/harness.mjs",
+    "check": "npm run typecheck && npm test && npm run build"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.700.0",
-    "@aws-sdk/s3-request-presigner": "^3.700.0",
-    "@prisma/client": "^6.2.1",
-    "@remix-run/dev": "^2.16.1",
-    "@remix-run/fs-routes": "^2.16.1",
-    "@remix-run/node": "^2.16.1",
-    "@remix-run/react": "^2.16.1",
-    "@remix-run/serve": "^2.16.1",
-    "@shopify/app-bridge-react": "^4.1.6",
-    "@shopify/polaris": "^12.0.0",
-    "@shopify/shopify-app-remix": "^4.1.0",
-    "@shopify/shopify-app-session-storage-prisma": "^9.0.1",
-    "isbot": "^5.1.0",
-    "prisma": "^6.2.1",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "vite-tsconfig-paths": "^5.0.1"
+    "@preact/preset-vite": "^2.10.6",
+    "esbuild": "^0.28.2",
+    "preact": "^10.29.8",
+    "vite": "^8.3.1"
   },
   "devDependencies": {
-    "@remix-run/eslint-config": "^2.16.1",
-    "@remix-run/route-config": "^2.16.1",
-    "@shopify/api-codegen-preset": "^1.1.1",
-    "@types/eslint": "^9.6.1",
-    "@types/node": "^22.2.0",
-    "@types/react": "^18.2.31",
-    "@types/react-dom": "^18.2.14",
-    "eslint": "^8.42.0",
-    "eslint-config-prettier": "^10.0.1",
-    "prettier": "^3.2.4",
-    "typescript": "^5.2.2",
-    "vite": "^6.2.2",
-    "vitest": "^3.0.0"
+    "@cloudflare/workers-types": "^5.20260929.1",
+    "@shopify/app-bridge-types": "^0.7.2",
+    "@shopify/polaris-types": "^1.1.0",
+    "happy-dom": "^20.14.5",
+    "liquidjs": "^10.29.0",
+    "typescript": "~5.9.3",
+    "vitest": "^5.0.2",
+    "wrangler": "^4.143.0"
   },
-  "workspaces": {
-    "packages": [
-      "extensions/*"
-    ]
-  },
-  "trustedDependencies": [
-    "@shopify/plugin-cloudflare"
-  ],
-  "resolutions": {
-    "@graphql-tools/url-loader": "8.0.16",
-    "@graphql-codegen/client-preset": "4.7.0",
-    "@graphql-codegen/typescript-operations": "4.5.0",
-    "minimatch": "9.0.5",
-    "vite": "^6.2.2"
-  },
-  "overrides": {
-    "@graphql-tools/url-loader": "8.0.16",
-    "@graphql-codegen/client-preset": "4.7.0",
-    "@graphql-codegen/typescript-operations": "4.5.0",
-    "minimatch": "9.0.5",
-    "vite": "^6.2.2"
-  }
+  "workspaces": [
+    "extensions/*"
+  ]
 }

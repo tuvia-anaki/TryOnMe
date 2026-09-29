@@ -1,39 +1,14 @@
 node_modules
-.DS_Store
-
-/.cache
-/build
-/app/build
-/public/build/
-/public/_dev
-/app/public/build
-/prisma/dev.sqlite
-/prisma/dev.sqlite-journal
-database.sqlite
-
+dist
+.wrangler
+.dev.vars
 .env
 .env.*
-
-# Lockfile is committed so `npm ci` works on the host (Render).
-yarn.lock
-pnpm-lock.yaml
-
-/extensions/*/dist
-
-# Ignore shopify files created during app dev
-.shopify/*
-.shopify.lock
-
-# Virtual Try-On local data
-.data/
-prisma/test.sqlite
-prisma/test.sqlite-journal
-
-# Local object storage + scratch data (never deployed)
-.data/
-debug-requests.log
-
-# Agent skills installed by the Shopify AI Toolkit (host tooling, not app code)
-.agents/
-.claude/
-skills-lock.json
+!.env.example
+.shopify
+.DS_Store
+*.log
+coverage
+harness/dist
+extensions/*/dist
+build

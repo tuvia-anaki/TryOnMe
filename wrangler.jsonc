@@ -1,0 +1,18 @@
+{
+  // Cloudflare Worker hosting the admin app (free plan is plenty):
+  // static files from dist/, plus webhooks and security headers in src/worker.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "prism-variant-images",
+  "main": "src/worker/index.ts",
+  "compatibility_date": "2026-09-01",
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    // Hashed JS/CSS go straight to Cloudflare's asset server (free, unlimited);
+    // HTML documents and webhooks run through the worker.
+    "run_worker_first": ["/*", "!/assets/*"]
+  },
+  "observability": { "enabled": true }
+  // Secret (not in this file): npx wrangler secret put SHOPIFY_API_SECRET
+}

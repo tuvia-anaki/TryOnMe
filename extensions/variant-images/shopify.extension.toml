@@ -1,0 +1,6 @@
+# Theme app extension: storefront gallery filtering + swatches.
+# Scripts are built from src/storefront by `npm run build:storefront`.
+name = "Variant images"
+type = "theme"
+handle = "variant-images"
+uid = "807f7879-75be-1e79-0a44-49a658ceb53e70bedaa6"

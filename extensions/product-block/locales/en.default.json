@@ -1,0 +1,20 @@
+{
+  "name": "Variant images",
+  "heading": "Variant images",
+  "loading": "Loading…",
+  "notSetUp": "Not set up",
+  "setUp": {
+    "one": "Set up · {{count}} group",
+    "other": "Set up · {{count}} groups"
+  },
+  "summary": "{{variants}} variants · {{media}} images",
+  "singleVariant": "This product has a single variant — nothing to assign.",
+  "notEnoughMedia": "Add at least two images to assign them to variants.",
+  "autoAssign": "Auto-assign",
+  "reassign": "Re-run auto-assign",
+  "edit": "Edit variant images",
+  "assigned": "Assigned {{images}} images to {{filled}} of {{total}} groups.",
+  "noMatch": "Couldn't find a reliable match. Open the editor to assign images by hand.",
+  "error": "Something went wrong: {{message}}",
+  "groupLine": "{{label}}: {{count}} images"
+}

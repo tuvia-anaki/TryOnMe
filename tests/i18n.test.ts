@@ -1,30 +1,20 @@
 import { describe, expect, it } from "vitest";
-import { LANGUAGES, isRtl, isValidLanguage } from "../app/lib/i18n/languages";
-import { TRANSLATIONS, t } from "../app/lib/i18n/translations";
+import { localeFileFor } from "../src/admin/i18n";
 
-describe("i18n", () => {
-  it("ships 21 languages (top Shopify markets + Hebrew)", () => {
-    expect(LANGUAGES).toHaveLength(21);
-    expect(LANGUAGES.map((l) => l.code)).toContain("he");
-    expect(isRtl("he")).toBe(true);
-    expect(isRtl("en")).toBe(false);
-    expect(isValidLanguage("de")).toBe(true);
-    expect(isValidLanguage("xx")).toBe(false);
+const files = ["./locales/de.json", "./locales/pt-BR.json", "./locales/pt-PT.json", "./locales/zh-CN.json", "./locales/zh-TW.json", "./locales/nb.json"];
+
+describe("admin locale lookup", () => {
+  it("matches Shopify admin locales case-insensitively", () => {
+    expect(localeFileFor("zh-CN", files)).toBe("./locales/zh-CN.json");
+    expect(localeFileFor("zh-tw", files)).toBe("./locales/zh-TW.json");
+    expect(localeFileFor("pt-BR", files)).toBe("./locales/pt-BR.json");
+    expect(localeFileFor("de-AT", files)).toBe("./locales/de.json");
+    expect(localeFileFor("pt", files)).toBe("./locales/pt-BR.json");
+    expect(localeFileFor("nb", files)).toBe("./locales/nb.json");
   });
-
-  it("every language has a dictionary covering every key", () => {
-    const englishKeys = Object.keys(TRANSLATIONS.en);
-    for (const lang of LANGUAGES) {
-      const dict = TRANSLATIONS[lang.code];
-      expect(dict, `missing dictionary for ${lang.code}`).toBeTruthy();
-      const missing = englishKeys.filter((k) => !(k in dict));
-      expect(missing, `missing keys in ${lang.code}`).toEqual([]);
-    }
-  });
-
-  it("translates with interpolation and falls back to English", () => {
-    expect(t("he", "navHome")).toBe("בית");
-    expect(t("fr", "productsSelected", { n: 3 })).toContain("3");
-    expect(t("unknown-lang", "navHome")).toBe("Home");
+  it("falls back to English (no file) for unknown locales", () => {
+    expect(localeFileFor("en", files)).toBeNull();
+    expect(localeFileFor(undefined, files)).toBeNull();
+    expect(localeFileFor("xx-YY", files)).toBeNull();
   });
 });

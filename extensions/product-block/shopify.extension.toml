@@ -1,0 +1,13 @@
+# Admin block on the product details page: variant image status + one-click auto-assign.
+# Hosted by Shopify (no server). Built by the Shopify CLI.
+api_version = "2026-07"
+uid = "45c04c78-76e9-3f5c-5d6c-e2552e74f99b8e366a7b"
+
+[[extensions]]
+name = "t:name"
+handle = "variant-images-product-block"
+type = "ui_extension"
+
+[[extensions.targeting]]
+module = "./src/ProductBlock.tsx"
+target = "admin.product-details.block.render"

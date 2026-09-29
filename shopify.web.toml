@@ -1,7 +1,7 @@
-name = "remix"
+# Web process for `shopify app dev`: Vite dev server for the admin + a watcher
+# that rebuilds the storefront scripts into the theme app extension.
+name = "admin"
 roles = ["frontend", "backend"]
-webhooks_path = "/webhooks/app/uninstalled"
 
 [commands]
-predev = "npm exec prisma generate"
-dev = "npm exec prisma migrate deploy && npm exec remix vite:dev"
+dev = "npm run dev:web"
