@@ -61,6 +61,12 @@ describe("sanitizeSettings", () => {
     expect(s.cards.max).toBe(1);
   });
 
+  it("keeps the setup guide's 'images assigned' flag (off by default)", () => {
+    expect(sanitizeSettings(null).admin.assigned).toBe(false);
+    expect(sanitizeSettings({ admin: { assigned: true } }).admin.assigned).toBe(true);
+    expect(sanitizeSettings({ admin: { assigned: "yes" } }).admin.assigned).toBe(false);
+  });
+
   it("accepts split colors and https image URLs only", () => {
     const s = sanitizeSettings({
       swatches: {

@@ -39,8 +39,8 @@ export interface ProductPage {
 }
 
 const LIST_QUERY = `#graphql
-query ProductsList($first: Int, $after: String, $last: Int, $before: String, $query: String) {
-  products(first: $first, after: $after, last: $last, before: $before, query: $query, sortKey: TITLE) {
+query ProductsList($first: Int, $after: String, $last: Int, $before: String, $query: String, $sortKey: ProductSortKeys = TITLE, $reverse: Boolean = false) {
+  products(first: $first, after: $after, last: $last, before: $before, query: $query, sortKey: $sortKey, reverse: $reverse) {
     pageInfo { hasNextPage hasPreviousPage startCursor endCursor }
     nodes {
       id
@@ -73,12 +73,16 @@ export async function listProducts(params: {
   after?: string | null;
   before?: string | null;
   pageSize?: number;
+  /** "updated": most recently edited first (home page). Default: by title. */
+  sort?: "title" | "updated";
 }): Promise<ProductPage> {
   const size = params.pageSize ?? 25;
   const search = params.search?.trim();
   // Free-text search (title, SKU, vendor…); quoted so spaces and punctuation are safe.
   const variables: Record<string, unknown> = {
     query: search ? `"${search.replace(/["\\]/g, " ")}"` : null,
+    sortKey: params.sort === "updated" ? "UPDATED_AT" : "TITLE",
+    reverse: params.sort === "updated",
   };
   if (params.before) {
     variables.last = size;

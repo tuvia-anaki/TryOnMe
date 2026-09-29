@@ -4,7 +4,7 @@ import { colorsForName, parseCssColor, rgbToLab } from "../../shared/colors";
 import { suggestGroupingOptions, type ProductModel } from "../../shared/product";
 import { gql } from "../api/graphql";
 import { listProducts, loadProduct, saveProductConfig } from "../api/products";
-import { loadAppContext } from "../api/settings";
+import { loadAppContext, markAssigned } from "../api/settings";
 import { ErrorBanner } from "../components/common";
 import { formatNumber, t } from "../i18n";
 import { useAsync } from "../lib/hooks";
@@ -93,6 +93,7 @@ export function Bulk() {
               } else {
                 result.config.hideUnassigned = loaded.config.hideUnassigned;
                 await saveProductConfig(loaded.product, result.config, { syncVariantImages: syncImages, digest: loaded.digest });
+                if (!counts.saved) void markAssigned();
                 counts.saved += 1;
                 push({
                   ok: true,

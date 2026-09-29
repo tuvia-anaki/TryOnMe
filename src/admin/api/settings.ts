@@ -74,3 +74,17 @@ export async function saveSettings(context: AppContext, next: AppSettings): Prom
   context.settingsSaved = true;
   return clean;
 }
+
+/**
+ * Remember, shop-wide, that variant images were assigned at least once, so the
+ * setup guide can tick that step even when the product isn't on the first page.
+ */
+export async function markAssigned(): Promise<void> {
+  try {
+    const context = await loadAppContext(true);
+    if (context.settings.admin.assigned) return;
+    await saveSettings(context, { ...context.settings, admin: { ...context.settings.admin, assigned: true } });
+  } catch {
+    /* Only the setup guide uses this; it also looks at recently edited products. */
+  }
+}

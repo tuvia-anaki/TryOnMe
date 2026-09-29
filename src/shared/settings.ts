@@ -74,6 +74,8 @@ export interface AdminSettings {
   syncVariantImages: boolean;
   /** Auto-assign: what to do with images before the first variant image. */
   leading: "shared" | "first" | "none";
+  /** Variant images were assigned at least once (drives the setup guide). */
+  assigned: boolean;
 }
 
 export interface AppSettings {
@@ -134,6 +136,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   admin: {
     syncVariantImages: true,
     leading: "shared",
+    assigned: false,
   },
   customCss: "",
 };
@@ -253,6 +256,7 @@ export function sanitizeSettings(raw: unknown): AppSettings {
     admin: {
       syncVariantImages: bool(a.syncVariantImages, d.admin.syncVariantImages),
       leading: oneOf(a.leading, ["shared", "first", "none"] as const, d.admin.leading),
+      assigned: bool(a.assigned, d.admin.assigned),
     },
     // "<" is never needed in CSS and would let the value break out of its <style> tag.
     customCss: text(src.customCss, d.customCss, 8000).replace(/</g, ""),

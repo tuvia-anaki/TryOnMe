@@ -10,7 +10,7 @@ import { colorsForName, parseCssColor, rgbToLab } from "../../shared/colors";
 import { cloneConfig, configsEqual, emptyConfig, type NormalizedConfig } from "../../shared/config";
 import { groupingCombinations } from "../../shared/product";
 import { loadProduct, saveProductConfig, StaleConfigError, type LoadedProduct } from "../api/products";
-import { loadAppContext } from "../api/settings";
+import { loadAppContext, markAssigned } from "../api/settings";
 import { loadThemeStatus, themeEditorUrl } from "../api/theme";
 import { ErrorBanner, Loading, openAdmin, openExternal } from "../components/common";
 import { GroupList, MediaGrid, VariantPreview } from "../components/EditorParts";
@@ -83,6 +83,7 @@ export function ProductEditor({ id }: { id: number }) {
       setSaved(cloneConfig(config));
       setDigest(result.digest);
       setNotice(null);
+      if (config.groups.some((group) => group.media.length)) void markAssigned();
       toast(
         result.syncedVariants
           ? tn(result.syncedVariants, "Saved. Updated {count} variant image.", "Saved. Updated {count} variant images.")

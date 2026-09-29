@@ -12,6 +12,11 @@ const loaders: Record<string, () => Promise<{ default: Dict }>> = import.meta.gl
 
 let dict: Dict = {};
 let lang = "en";
+let adminLocale: string | undefined;
+const listeners = new Set<() => void>();
+const PREFERENCE_KEY = "pvi:language";
+
+const codeOf = (path: string): string => path.replace(/^.*\//, "").replace(/\.json$/, "");
 
 /** Locale file for a Shopify admin locale ("zh-CN", "pt-BR", "de", "pt"…), matched case-insensitively. */
 export function localeFileFor(locale: string | undefined, available: string[]): string | null {
@@ -26,16 +31,77 @@ export function localeFileFor(locale: string | undefined, available: string[]): 
   );
 }
 
-export async function initI18n(locale: string | undefined): Promise<void> {
+/** Language code of the locale file used for a Shopify locale ("en" when there is none). */
+function resolve(locale: string | undefined): string {
   const path = localeFileFor(locale, Object.keys(loaders));
-  if (!path) return;
-  try {
-    dict = (await loaders[path]()).default;
-    lang = path.replace(/^.*\//, "").replace(/\.json$/, "");
-    document.documentElement.lang = lang;
-  } catch {
-    /* fall back to English */
+  return path ? codeOf(path) : "en";
+}
+
+async function load(locale: string | undefined): Promise<void> {
+  const path = localeFileFor(locale, Object.keys(loaders));
+  let next: Dict = {};
+  let code = "en";
+  if (path) {
+    try {
+      next = (await loaders[path]()).default;
+      code = codeOf(path);
+    } catch {
+      /* fall back to English */
+    }
   }
+  dict = next;
+  lang = code;
+  document.documentElement.lang = lang;
+}
+
+/** Starts in the merchant's Shopify admin language, unless they picked another one in the app. */
+export async function initI18n(locale: string | undefined): Promise<void> {
+  adminLocale = locale;
+  await load(languagePreference() ?? locale);
+}
+
+function languagePreference(): string | null {
+  try {
+    return localStorage.getItem(PREFERENCE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+/** Languages the admin is translated into ("en" first). */
+export function availableLanguages(): string[] {
+  return ["en", ...Object.keys(loaders).map(codeOf)];
+}
+
+/**
+ * Switch the app's language (remembered in this browser). Choosing the Shopify
+ * admin's own language clears the choice, so the app follows the admin again.
+ */
+export async function setLanguage(code: string): Promise<void> {
+  try {
+    if (code === resolve(adminLocale)) localStorage.removeItem(PREFERENCE_KEY);
+    else localStorage.setItem(PREFERENCE_KEY, code);
+  } catch {
+    /* storage blocked: the choice lasts until the app reloads */
+  }
+  await load(code);
+  listeners.forEach((fn) => fn());
+}
+
+export function onLanguageChange(fn: () => void): () => void {
+  listeners.add(fn);
+  return () => void listeners.delete(fn);
+}
+
+/** Each language in its own words: "Deutsch", "Português (Brasil)", "日本語". */
+export function languageName(code: string): string {
+  try {
+    const name = new Intl.DisplayNames([code], { type: "language" }).of(code);
+    if (name) return name.charAt(0).toLocaleUpperCase(code) + name.slice(1);
+  } catch {
+    /* old browsers */
+  }
+  return code;
 }
 
 /** Marks a string for translation where it is stored before being passed to t(). */
