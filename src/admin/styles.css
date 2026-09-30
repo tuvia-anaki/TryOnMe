@@ -1,414 +1,226 @@
-/* Custom pieces that Polaris web components don't cover (media grid, group list).
-   Colors follow Polaris' neutral palette so everything feels native. */
+/* The few pieces Polaris web components don't cover. Colors follow Polaris' neutrals so they feel native. */
 
 :root {
-  --pvi-border: #e3e3e3;
-  --pvi-border-strong: #c9c9c9;
-  --pvi-surface: #ffffff;
-  --pvi-subdued: #f7f7f7;
-  --pvi-text: #303030;
-  --pvi-text-subdued: #616161;
-  --pvi-accent: #005bd3;
-  --pvi-accent-soft: #eaf2ff;
-  --pvi-success: #0c5132;
-  --pvi-warning: #8a6116;
-  --pvi-radius: 10px;
+  --vc-border: #e3e3e3;
+  --vc-border-strong: #c9c9c9;
+  --vc-surface: #ffffff;
+  --vc-subdued: #f7f7f7;
+  --vc-text: #303030;
+  --vc-text-subdued: #616161;
+  --vc-accent: #005bd3;
+  --vc-accent-soft: #eaf2ff;
 }
 
 body {
   margin: 0;
-  color: var(--pvi-text);
+  color: var(--vc-text);
   font-family: -apple-system, BlinkMacSystemFont, "San Francisco", "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
 }
 
-.pvi-editor {
-  display: grid;
-  grid-template-columns: minmax(220px, 300px) minmax(0, 1fr);
-  gap: 16px;
-  align-items: start;
-}
-.pvi-editor__main {
-  display: grid;
-  gap: 16px;
-  min-width: 0;
-}
-@media (max-width: 860px) {
-  .pvi-editor {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* ---------- Group list ---------- */
-.pvi-groups {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.pvi-group {
-  display: grid;
-  grid-template-columns: 28px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  padding: 8px 10px;
-  border: 1px solid transparent;
-  border-radius: 8px;
-  background: none;
-  font: inherit;
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-.pvi-group:hover {
-  background: var(--pvi-subdued);
-}
-.pvi-group[aria-current="true"] {
-  background: var(--pvi-accent-soft);
-  border-color: var(--pvi-accent);
-}
-.pvi-group.is-drop-target {
-  border-style: dashed;
-  border-color: var(--pvi-accent);
-  background: var(--pvi-accent-soft);
-}
-.pvi-group__label {
+.vc-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
   overflow: hidden;
-  text-overflow: ellipsis;
+  clip: rect(0 0 0 0);
   white-space: nowrap;
-  font-weight: 500;
-}
-.pvi-group__meta {
-  display: block;
-  font-size: 12px;
-  font-weight: 400;
-  color: var(--pvi-text-subdued);
-}
-.pvi-group__count {
-  min-width: 22px;
-  padding: 1px 7px;
-  border-radius: 10px;
-  background: #e8e8e8;
-  font-size: 12px;
-  text-align: center;
-}
-.pvi-group__count.is-empty {
-  background: #fff1d6;
-  color: var(--pvi-warning);
-}
-.pvi-dot {
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15);
-  background-size: cover;
-  background-position: center;
-  display: inline-block;
-}
-.pvi-dot--text {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  font-weight: 600;
-  background: #eee;
-  color: #555;
-}
-.pvi-dot--shared {
-  background: repeating-linear-gradient(45deg, #dfe3e8, #dfe3e8 4px, #fff 4px, #fff 8px);
 }
 
-/* ---------- Media grid ---------- */
-.pvi-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
+.vc-empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--vc-text-subdued);
 }
-/* Segmented tabs, styled like the Shopify admin's own. */
-.pvi-segmented {
-  display: inline-flex;
-  gap: 2px;
-  padding: 2px;
-  border-radius: 10px;
-  background: #ebebeb;
-}
-.pvi-segmented button {
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  padding: 5px 12px;
-  font: inherit;
-  font-size: 13px;
-  font-weight: 550;
-  line-height: 20px;
-  color: var(--pvi-text-subdued);
-  cursor: pointer;
-  white-space: nowrap;
-}
-.pvi-segmented button:hover {
-  color: var(--pvi-text);
-}
-.pvi-segmented button:focus-visible {
-  outline: 2px solid var(--pvi-accent);
-  outline-offset: 1px;
-}
-.pvi-segmented button[aria-pressed="true"] {
-  background: var(--pvi-surface);
-  color: var(--pvi-text);
-  box-shadow:
-    0 1px 0 rgba(0, 0, 0, 0.08),
-    inset 0 0 0 1px rgba(0, 0, 0, 0.06);
-}
-.pvi-progress {
+
+/* Setup guide progress (s-progress shows a loading animation at 0). */
+.vc-progress {
   height: 6px;
   border-radius: 3px;
   background: #e3e3e3;
   overflow: hidden;
 }
-.pvi-progress span {
+.vc-progress span {
   display: block;
   height: 100%;
   border-radius: inherit;
   background: #303030;
 }
-.pvi-progress.is-done span {
+.vc-progress.is-done span {
   background: #29845a;
 }
-.pvi-visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
-}
-.pvi-media-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
-  gap: 12px;
-}
-.pvi-tile {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  padding: 0;
-  border: 2px solid var(--pvi-border);
-  border-radius: var(--pvi-radius);
-  background: var(--pvi-surface);
-  overflow: hidden;
-  cursor: pointer;
-  font: inherit;
-  color: inherit;
-  text-align: left;
-  transition: border-color 0.12s, box-shadow 0.12s;
-}
-.pvi-tile:hover {
-  border-color: var(--pvi-border-strong);
-}
-.pvi-tile:focus-visible {
-  outline: 2px solid var(--pvi-accent);
-  outline-offset: 2px;
-}
-.pvi-tile.is-selected {
-  border-color: var(--pvi-accent);
-  box-shadow: 0 0 0 1px var(--pvi-accent);
-}
-.pvi-tile.is-dragging {
-  opacity: 0.5;
-}
-.pvi-tile__img {
-  display: block;
-  width: 100%;
-  aspect-ratio: 1;
-  object-fit: contain;
-  background: var(--pvi-subdued);
-}
-.pvi-tile__check {
-  position: absolute;
-  top: 6px;
-  left: 6px;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  border: 2px solid #fff;
-  background: rgba(255, 255, 255, 0.85);
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 13px;
-  color: #fff;
-}
-.pvi-tile.is-selected .pvi-tile__check {
-  background: var(--pvi-accent);
-}
-.pvi-tile__main {
-  position: absolute;
-  top: 7px;
-  left: 34px;
-  padding: 2px 6px;
-  border-radius: 6px;
-  background: #303030;
-  color: #fff;
-  font-size: 11px;
-  font-weight: 600;
-}
-.pvi-tile__type {
-  position: absolute;
-  top: 7px;
-  right: 6px;
-  padding: 1px 6px;
-  border-radius: 6px;
-  background: rgba(0, 0, 0, 0.65);
-  color: #fff;
-  font-size: 11px;
-}
-/* Labels float over the bottom of the image, so every tile keeps the same size. */
-.pvi-tile__foot {
-  position: absolute;
-  left: 6px;
-  right: 6px;
-  bottom: 6px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  align-items: center;
-  font-size: 12px;
-}
-.pvi-chip {
+
+/* ---------- Colors ---------- */
+.vc-chip {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  max-width: 100%;
-  padding: 1px 6px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.94);
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1);
-  color: var(--pvi-text);
-  font-size: 11px;
+  gap: 6px;
+  padding: 2px 8px 2px 4px;
+  border-radius: 12px;
+  background: #f1f1f1;
+  font-size: 12px;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
-.pvi-chip .pvi-dot {
-  width: 10px;
-  height: 10px;
+.vc-dot {
+  display: inline-block;
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.18);
+  background-size: cover;
 }
-.pvi-tile__action {
-  margin-left: auto;
-  border: 0;
-  background: #fff;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.12);
-  padding: 2px 6px;
-  font: inherit;
-  font-size: 11px;
-  color: var(--pvi-accent);
-  cursor: pointer;
-  border-radius: 4px;
-}
-.pvi-tile__action:hover {
-  background: var(--pvi-accent-soft);
-}
-.pvi-options {
-  margin-top: 12px;
-}
-
-/* ---------- Preview strip ---------- */
-.pvi-strip {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-.pvi-strip img {
-  width: 64px;
-  height: 64px;
-  object-fit: contain;
-  border-radius: 8px;
-  border: 1px solid var(--pvi-border);
-  background: var(--pvi-subdued);
-}
-.pvi-strip .is-main {
-  border: 2px solid #303030;
-}
-
-/* ---------- Misc ---------- */
-.pvi-empty {
-  padding: 24px;
-  text-align: center;
-  color: var(--pvi-text-subdued);
-}
-.pvi-swatch-preview {
-  padding: 16px;
-  border: 1px dashed var(--pvi-border-strong);
-  border-radius: var(--pvi-radius);
-  background: #fff;
-}
-.pvi-color-table {
+.vc-color-table {
   width: 100%;
   border-collapse: collapse;
+  font-size: 13px;
 }
-.pvi-color-table td {
+.vc-color-table td {
   padding: 6px 4px;
-  border-bottom: 1px solid var(--pvi-border);
+  border-top: 1px solid var(--vc-border);
   vertical-align: middle;
 }
-.pvi-log {
-  max-height: 260px;
-  overflow: auto;
+.vc-color-table input[type="color"] {
+  width: 44px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--vc-border-strong);
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+}
+
+/* ---------- Card order ---------- */
+.vc-order {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
   margin: 0;
-  padding: 8px 12px;
-  border-radius: 8px;
-  background: var(--pvi-subdued);
-  font: 12px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace;
+  padding: 0;
   list-style: none;
 }
-.pvi-sr {
-  position: absolute !important;
-  width: 1px;
-  height: 1px;
+.vc-order__row {
+  display: grid;
+  grid-template-columns: auto auto 44px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border: 1px solid var(--vc-border);
+  border-radius: 10px;
+  background: var(--vc-surface);
+  cursor: grab;
+  transition: box-shadow 0.12s, border-color 0.12s, opacity 0.12s;
+}
+.vc-order__row:hover {
+  border-color: var(--vc-border-strong);
+}
+.vc-order__row.is-dragging {
+  opacity: 0.45;
+}
+.vc-order__row.is-over {
+  border-color: var(--vc-accent);
+  box-shadow: 0 -3px 0 var(--vc-accent);
+}
+.vc-order__row.is-hidden .vc-order__img,
+.vc-order__row.is-hidden .vc-order__text {
+  opacity: 0.45;
+}
+.vc-order__handle {
+  color: var(--vc-text-subdued);
+  letter-spacing: -2px;
+  font-size: 12px;
+}
+.vc-order__pos {
+  min-width: 22px;
+  color: var(--vc-text-subdued);
+  font-size: 12px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.vc-order__img {
+  display: block;
+  width: 44px;
+  height: 44px;
+  object-fit: cover;
+  border-radius: 8px;
+  background: var(--vc-subdued);
+}
+.vc-order__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.vc-order__title {
   overflow: hidden;
-  clip: rect(0 0 0 0);
+  font-weight: 550;
+  font-size: 13px;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
-
-/* Mock mode only (local development outside Shopify). */
-.pvi-mock-toast {
-  position: fixed;
-  left: 50%;
-  bottom: 24px;
-  transform: translateX(-50%);
-  z-index: 1000;
-  padding: 10px 16px;
-  border-radius: 10px;
-  background: #303030;
-  color: #fff;
-  font-size: 14px;
+.vc-order__meta {
+  color: var(--vc-text-subdued);
+  font-size: 12px;
 }
-.pvi-mock-toast.is-error {
-  background: #8e1f0b;
-}
-.pvi-mock-savebar {
-  position: sticky;
-  top: 0;
-  z-index: 999;
+.vc-order__actions {
   display: flex;
-  gap: 8px;
-  justify-content: flex-end;
   align-items: center;
-  padding: 10px 16px;
-  background: #1a1a1a;
-  color: #fff;
+  gap: 4px;
 }
-.pvi-mock-savebar span {
-  margin-right: auto;
+.vc-icon-button,
+.vc-text-button {
+  height: 28px;
+  border: 1px solid var(--vc-border-strong);
+  border-radius: 8px;
+  background: var(--vc-surface);
+  color: var(--vc-text);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.vc-icon-button {
+  width: 28px;
+}
+.vc-text-button {
+  padding: 0 10px;
+}
+.vc-icon-button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.vc-icon-button:focus-visible,
+.vc-text-button:focus-visible {
+  outline: 2px solid var(--vc-accent);
+  outline-offset: 1px;
+}
+@media (max-width: 560px) {
+  .vc-order__row {
+    grid-template-columns: auto 44px minmax(0, 1fr);
+  }
+  .vc-order__handle {
+    display: none;
+  }
+  .vc-order__actions {
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+  }
 }
 
-/* App Bridge renders the save bar in the admin chrome; its source element never shows in the page. */
-ui-save-bar {
-  display: none;
+/* ---------- Swatch preview ---------- */
+.vc-preview-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  max-width: 260px;
+}
+.vc-preview-card__image {
+  aspect-ratio: 4 / 5;
+  border-radius: 10px;
+  opacity: 0.85;
+}
+.vc-preview-card__title {
+  margin-top: 4px;
+  font-weight: 550;
+}
+.vc-preview-card__price {
+  color: var(--vc-text-subdued);
 }

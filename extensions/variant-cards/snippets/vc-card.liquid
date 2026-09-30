@@ -1,0 +1,162 @@
+{%- comment -%}
+  One product card in the app's sections.
+  - product (required), variant (a split card's variant, or nil for the whole product)
+  - title, split_key ('option1'…, for split cards), s (the block's settings)
+{%- endcomment -%}
+{%- liquid
+  assign vc = app.metafields.variant_cards.settings.value
+  # Whole-product cards get variant: nil (never "blank": it's an empty string, and truthy).
+  assign is_variant = false
+  if variant
+    assign is_variant = true
+  endif
+  if is_variant
+    assign url = variant.url
+    assign image = variant.featured_media | default: product.featured_media
+    assign price = variant.price
+    assign compare = variant.compare_at_price
+    assign available = variant.available
+    assign target = variant
+    assign group = product.variants | where: split_key, variant[split_key]
+    assign choices = group.size
+  else
+    assign url = product.url
+    assign image = product.featured_media
+    assign price = product.price
+    assign compare = product.compare_at_price
+    assign available = product.available
+    assign target = product.selected_or_first_available_variant
+    assign choices = product.variants.size
+    if product.has_only_default_variant
+      assign choices = 1
+    endif
+  endif
+  assign on_sale = false
+  if compare > price
+    assign on_sale = true
+  endif
+  assign second = nil
+  if s.show_second_image and product.media.size > 1
+    for media in product.media
+      if media.media_type == 'image' and media.id != image.id
+        assign second = media
+        break
+      endif
+    endfor
+  endif
+  assign alt = title | escape
+  assign sizes = '(min-width: 1200px) calc(100vw / ' | append: s.columns_desktop | append: '), (min-width: 750px) 33vw, calc(100vw / ' | append: s.columns_mobile | append: ')'
+
+  # The color option, for swatches.
+  assign color_words = 'color,colour,colors,colours,colorway,shade,farbe,farben,couleur,couleurs,colore,colori,cor,cores,kleur,kleuren,färg,farge,farve,väri,kolor,barva,renk,culoare,szín,цвет,колір,צבע,لون,رنگ,颜色,顏色,カラー,色,색상,สี' | split: ','
+  assign swatch_option = nil
+  if s.show_swatches
+    for option in product.options_with_values
+      assign option_name = option.name | downcase | strip
+      if color_words contains option_name and option.values.size > 1
+        assign swatch_option = option
+        break
+      endif
+    endfor
+  endif
+-%}
+<div class="vc-card{% unless available %} is-sold-out{% endunless %}" role="listitem" data-vc-own-card>
+  <a class="vc-card__media vc-ratio--{{ s.image_ratio | default: 'square' }}" href="{{ url }}" tabindex="-1" aria-hidden="true">
+    {%- if image -%}
+      {{- image | image_url: width: 1000 | image_tag: loading: 'lazy', widths: '300,450,600,800,1000', sizes: sizes, class: 'vc-card__img', alt: alt -}}
+      {%- if second -%}
+        {{- second | image_url: width: 1000 | image_tag: loading: 'lazy', widths: '300,450,600,800,1000', sizes: sizes, class: 'vc-card__img vc-card__img--hover', alt: '' -}}
+      {%- endif -%}
+    {%- else -%}
+      {{- 'product-apparel-1' | placeholder_svg_tag: 'vc-card__img vc-card__placeholder' -}}
+    {%- endif -%}
+    {%- if available == false or on_sale -%}
+      <span class="vc-card__badges">
+        {%- if available == false -%}
+          <span class="vc-badge vc-badge--sold-out">{{ 'texts.sold_out' | t }}</span>
+        {%- elsif on_sale -%}
+          <span class="vc-badge vc-badge--sale">{{ 'texts.sale' | t }}</span>
+        {%- endif -%}
+      </span>
+    {%- endif -%}
+  </a>
+  <div class="vc-card__info">
+    {%- if s.show_vendor -%}
+      <p class="vc-card__vendor">{{ product.vendor }}</p>
+    {%- endif -%}
+    <a class="vc-card__title" href="{{ url }}">{{ title }}</a>
+    <p class="vc-card__price">
+      {%- if on_sale -%}
+        <span class="vc-card__price-now">{{ price | money }}</span>
+        <s class="vc-card__price-was">{{ compare | money }}</s>
+      {%- elsif is_variant == false and product.price_varies -%}
+        {%- assign from_price = product.price_min | money -%}
+        {{ 'texts.from' | t | replace: '{price}', from_price }}
+      {%- else -%}
+        {{ price | money }}
+      {%- endif -%}
+    </p>
+    {%- if swatch_option -%}
+      {%- assign swatch_key = 'option' | append: swatch_option.position -%}
+      {%- assign current = nil -%}
+      {%- if is_variant -%}{%- assign current = variant[swatch_key] -%}{%- endif -%}
+      <div class="vc-swatches" role="list" aria-label="{{ swatch_option.name | escape }}">
+        {%- for value in swatch_option.values limit: 8 -%}
+          {%- liquid
+            assign value_variants = product.variants | where: swatch_key, value.name
+            assign value_variant = value_variants | where: 'available', true | first
+            unless value_variant
+              assign value_variant = value_variants | first
+            endunless
+            assign key = value.name | downcase | strip
+            assign mapped = vc.swatches.colorMap[key]
+            assign value_image = value_variant.featured_media | default: nil
+          -%}
+          <a
+            class="vc-sw{% if value.name == current %} is-current{% endif %}{% unless value_variant.available %} is-sold-out{% endunless %}"
+            href="{{ value_variant.url }}"
+            role="listitem"
+            title="{{ value.name | escape }}"
+            aria-label="{{ swatch_option.name | escape }}: {{ value.name | escape }}"
+            data-vc-swatch
+            data-url="{{ value_variant.url }}"
+            {% if value_image %}data-image="{{ value_image | image_url: width: 1000 }}"{% endif %}
+          >
+            {%- if value.swatch.image -%}
+              <span style="background-image: url({{ value.swatch.image | image_url: width: 72 }})"></span>
+            {%- elsif value.swatch.color -%}
+              <span style="background: {{ value.swatch.color }}"></span>
+            {%- elsif mapped -%}
+              {%- assign colors = mapped | split: '/' -%}
+              {%- if colors.size > 1 -%}
+                <span style="background: linear-gradient(135deg, {{ colors[0] | strip }} 50%, {{ colors[1] | strip }} 50%)"></span>
+              {%- else -%}
+                <span style="background: {{ mapped }}"></span>
+              {%- endif -%}
+            {%- elsif value_image -%}
+              <span style="background-image: url({{ value_image | image_url: width: 72 }})"></span>
+            {%- else -%}
+              <span style="background: {{ key | remove: ' ' }}"></span>
+            {%- endif -%}
+          </a>
+        {%- endfor -%}
+        {%- if swatch_option.values.size > 8 -%}
+          <a class="vc-sw-more" href="{{ product.url }}">+{{ swatch_option.values.size | minus: 8 }}</a>
+        {%- endif -%}
+      </div>
+    {%- endif -%}
+    {%- if s.show_add_to_cart -%}
+      {%- if choices > 1 and available -%}
+        <a class="vc-card__button" href="{{ url }}"><span>{{ 'texts.choose_options' | t }}</span></a>
+      {%- else -%}
+        <form action="{{ routes.cart_add_url }}" method="post" class="vc-card__form" data-vc-add>
+          <input type="hidden" name="id" value="{{ target.id }}">
+          <input type="hidden" name="quantity" value="1">
+          <button type="submit" class="vc-card__button"{% unless available %} disabled{% endunless %}>
+            <span>{% if available %}{{ 'texts.add_to_cart' | t }}{% else %}{{ 'texts.sold_out' | t }}{% endif %}</span>
+          </button>
+        </form>
+      {%- endif -%}
+    {%- endif -%}
+  </div>
+</div>

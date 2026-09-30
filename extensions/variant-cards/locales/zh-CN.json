@@ -1,0 +1,17 @@
+{
+  "texts": {
+    "from": "{price} 起",
+    "sold_out": "售罄",
+    "sale": "促销",
+    "add_to_cart": "加入购物车",
+    "choose_options": "选择选项",
+    "added": "已加入购物车",
+    "view_cart": "查看购物车",
+    "load_more": "加载更多",
+    "loading": "正在加载…",
+    "view_all": "查看全部",
+    "previous": "上一个",
+    "next": "下一个",
+    "example_product": "示例产品"
+  }
+}

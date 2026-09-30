@@ -1,192 +1,193 @@
 /**
- * Shop-wide settings. Stored as JSON in an app-data metafield (on the app
- * installation) so the theme app extension can read them from Liquid via
- * `app.metafields.variant_images.settings` — again, no app server needed.
+ * Shop-wide settings, stored as JSON in an app-data metafield on the app
+ * installation. The theme app extension reads them in Liquid
+ * (`app.metafields.variant_cards.settings`), so no app server is involved.
+ * Per-collection overrides live on each collection (CollectionSettings).
  */
 
 export type Shape = "circle" | "rounded" | "square";
-
-export interface GallerySettings {
-  /** Filter the product gallery by the selected variant. */
-  enabled: boolean;
-  /** Hide media that isn't assigned to any variant (shared media always shows). */
-  hideUnassigned: boolean;
-  /** When a product page opens without a selected variant. */
-  noSelection: "first" | "all";
-  /** After a variant change, jump to that variant's main image. */
-  showMainFirst: boolean;
-  /** Hide other variants' media with CSS before the script runs (reduces flicker). */
-  preventFlash: boolean;
-  /** Advanced: CSS selector for gallery items when auto-detection fails. */
-  itemSelector: string;
-}
-
-export interface PillStyle {
-  radius: number;
-  background: string;
-  text: string;
-  border: string;
-  selectedBackground: string;
-  selectedText: string;
-  selectedBorder: string;
-}
+/** Which option becomes separate cards: "auto" = the color option (products without one stay one card). */
+export type SplitBy = "auto" | "option1" | "option2" | "option3" | "combined" | "all";
+/** How a card writes its price when its variants cost different amounts. */
+export type PriceFormat = "theme" | "from" | "range";
+export type PagingMode = "theme" | "load-more" | "infinite";
 
 export interface SwatchSettings {
-  /** Replace the theme's picker for matching options with visual swatches. */
+  /** Swatches under product cards. */
   enabled: boolean;
-  /** Which options get image/color swatches. */
-  applyTo: "color" | "all" | "custom";
-  /** Option names when applyTo = custom (case-insensitive). */
-  customOptions: string[];
-  /** Options that don't get visual swatches: keep the theme's picker or show buttons. */
-  otherOptions: "native" | "pills";
-  /** What visual swatches show. */
-  source: "auto" | "color" | "image";
+  /** Only the color option, or every option (one row each, up to 3). */
+  options: "color" | "all";
+  /** color / image chips for color options and buttons for the rest, or buttons everywhere. */
+  style: "auto" | "button";
+  /** For color chips: Shopify's swatch/named color, or the variant's image. */
+  source: "color" | "image";
   shape: Shape;
   size: number;
-  gap: number;
-  borderWidth: number;
-  borderColor: string;
-  selectedColor: string;
-  ringOffset: number;
-  showLabel: boolean;
-  tooltip: boolean;
-  soldOut: "cross" | "fade" | "hide";
-  pill: PillStyle;
+  /** Swatches per row before "+N". */
+  max: number;
+  align: "left" | "center" | "right";
+  /** Cards that aren't split: change the card image on hover or on click. */
+  trigger: "hover" | "click";
+  soldOut: "fade" | "cross" | "hide";
   /** normalized value name -> CSS color, or "color1/color2" for split swatches. */
   colorMap: Record<string, string>;
-  /** normalized value name -> image URL. */
-  imageMap: Record<string, string>;
 }
 
-export interface CardSettings {
-  /** Show color swatches on product cards (collections, search, home). */
-  enabled: boolean;
-  size: number;
-  max: number;
-  shape: Shape;
-  trigger: "hover" | "click";
-  align: "left" | "center" | "right";
-}
-
-export interface AdminSettings {
-  /** When saving, also set each variant's native Shopify image to its main image. */
-  syncVariantImages: boolean;
-  /** Auto-assign: what to do with images before the first variant image. */
-  leading: "shared" | "first" | "none";
-  /** Variant images were assigned at least once (drives the setup guide). */
-  assigned: boolean;
+export interface Texts {
+  /** Empty = the default for the store's language (theme extension locales). */
+  from: string;
+  soldOut: string;
+  sale: string;
+  addToCart: string;
+  added: string;
+  viewCart: string;
+  loadMore: string;
+  loading: string;
 }
 
 export interface AppSettings {
-  v: 1;
-  gallery: GallerySettings;
+  v: 2;
+  /** Emergency switch: false = the storefront script does nothing. */
+  enabled: boolean;
+  /** Which collection pages get variant cards. */
+  collections: { mode: "all" | "selected"; handles: string[] };
+  /** Other pages with product grids. */
+  pages: { allProducts: boolean; search: boolean; home: boolean };
+  split: { enabled: boolean; by: SplitBy; title: string };
+  price: { format: PriceFormat };
+  hide: { soldOut: boolean; noImage: boolean };
+  order: { mix: boolean; soldOutLast: boolean };
+  card: {
+    /** Hide the theme's own color swatches on split cards (they'd list every color). */
+    hideThemeSwatches: boolean;
+    /** Keep the theme's hover (second) image on split cards. */
+    secondImage: boolean;
+    soldOutBadge: boolean;
+    addToCart: boolean;
+  };
+  paging: { mode: PagingMode; scrollTop: boolean };
   swatches: SwatchSettings;
-  cards: CardSettings;
-  admin: AdminSettings;
-  customCss: string;
+  texts: Texts;
+  advanced: {
+    /** Hide the product grid until cards are split, to avoid a flash of the original cards. */
+    preventFlash: boolean;
+    gridSelector: string;
+    cardSelector: string;
+    customCss: string;
+    customJs: string;
+  };
+  admin: {
+    /** Setup guide progress. */
+    settingsSaved: boolean;
+    previewed: boolean;
+    themeChecked: boolean;
+    /** The theme the dashboard checks (empty = the published theme). */
+    themeId: string;
+  };
 }
+
+export interface CollectionSettings {
+  v: 1;
+  /** null = use the shop-wide setting. */
+  enabled: boolean | null;
+  split: boolean | null;
+  by: SplitBy | null;
+  title: string | null;
+  price: PriceFormat | null;
+  hideSoldOut: boolean | null;
+  hideNoImage: boolean | null;
+  mix: boolean | null;
+  /** Card keys ("<productId>" or "<productId>:<value>") shown first, in this order. */
+  order: string[];
+  /** Card keys never shown in this collection. */
+  hidden: string[];
+}
+
+export const TITLE_PRESETS = ["{product} - {value}", "{product} / {value}", "{value} {product}", "{product} ({value})", "{product}"] as const;
 
 export const DEFAULT_SETTINGS: AppSettings = {
-  v: 1,
-  gallery: {
-    enabled: true,
-    hideUnassigned: false,
-    noSelection: "first",
-    showMainFirst: true,
-    preventFlash: true,
-    itemSelector: "",
-  },
+  v: 2,
+  enabled: true,
+  collections: { mode: "all", handles: [] },
+  pages: { allProducts: true, search: true, home: false },
+  split: { enabled: true, by: "auto", title: "{product} - {value}" },
+  price: { format: "theme" },
+  hide: { soldOut: false, noImage: false },
+  order: { mix: false, soldOutLast: false },
+  card: { hideThemeSwatches: true, secondImage: false, soldOutBadge: true, addToCart: false },
+  paging: { mode: "theme", scrollTop: false },
   swatches: {
     enabled: false,
-    applyTo: "color",
-    customOptions: [],
-    otherOptions: "native",
-    source: "auto",
+    options: "color",
+    style: "auto",
+    source: "color",
     shape: "circle",
-    size: 36,
-    gap: 10,
-    borderWidth: 1,
-    borderColor: "#d4d4d4",
-    selectedColor: "#1a1a1a",
-    ringOffset: 2,
-    showLabel: true,
-    tooltip: true,
-    soldOut: "cross",
-    pill: {
-      radius: 6,
-      background: "#ffffff",
-      text: "#1a1a1a",
-      border: "#d4d4d4",
-      selectedBackground: "#1a1a1a",
-      selectedText: "#ffffff",
-      selectedBorder: "#1a1a1a",
-    },
-    colorMap: {},
-    imageMap: {},
-  },
-  cards: {
-    enabled: false,
     size: 20,
-    max: 5,
-    shape: "circle",
-    trigger: "hover",
+    max: 6,
     align: "left",
+    trigger: "hover",
+    soldOut: "fade",
+    colorMap: {},
   },
-  admin: {
-    syncVariantImages: true,
-    leading: "shared",
-    assigned: false,
-  },
-  customCss: "",
+  texts: { from: "", soldOut: "", sale: "", addToCart: "", added: "", viewCart: "", loadMore: "", loading: "" },
+  advanced: { preventFlash: true, gridSelector: "", cardSelector: "", customCss: "", customJs: "" },
+  admin: { settingsSaved: false, previewed: false, themeChecked: false, themeId: "" },
 };
 
-const COLOR_RE = /^(#[0-9a-f]{3,8}|rgba?\([^()]{3,40}\)|hsla?\([^()]{3,40}\)|[a-z]{3,20})$/i;
+export const EMPTY_COLLECTION_SETTINGS: CollectionSettings = {
+  v: 1,
+  enabled: null,
+  split: null,
+  by: null,
+  title: null,
+  price: null,
+  hideSoldOut: null,
+  hideNoImage: null,
+  mix: null,
+  order: [],
+  hidden: [],
+};
 
-function bool(value: unknown, fallback: boolean): boolean {
-  return typeof value === "boolean" ? value : fallback;
+/* ------------------------------------------------------------------ */
+/* Validation                                                          */
+/* ------------------------------------------------------------------ */
+
+const COLOR_RE = /^(#[0-9a-f]{3,8}|rgba?\([\d\s.,%]+\)|hsla?\([\d\s.,%deg]+\)|[a-z]{3,20})$/i;
+const SPLIT_BY = ["auto", "option1", "option2", "option3", "combined", "all"] as const;
+const PRICE_FORMATS = ["theme", "from", "range"] as const;
+
+const bool = (v: unknown, fallback: boolean): boolean => (typeof v === "boolean" ? v : fallback);
+const num = (v: unknown, fallback: number, min: number, max: number): number =>
+  typeof v === "number" && Number.isFinite(v) ? Math.min(max, Math.max(min, Math.round(v))) : fallback;
+function oneOf<T extends string>(v: unknown, options: readonly T[], fallback: T): T {
+  return typeof v === "string" && (options as readonly string[]).includes(v) ? (v as T) : fallback;
 }
+const text = (v: unknown, fallback: string, max: number): string => (typeof v === "string" ? v.slice(0, max) : fallback);
+/** Short storefront texts and templates: no markup. */
+const plain = (v: unknown, fallback: string, max = 80): string => text(v, fallback, max).replace(/[<>]/g, "");
+/** CSS selectors: no markup or Liquid. */
+const selector = (v: unknown): string => text(v, "", 300).replace(/[<>{}]/g, "");
+const handleList = (v: unknown, max: number): string[] =>
+  Array.isArray(v)
+    ? [...new Set(v.filter((h): h is string => typeof h === "string" && /^[\p{L}\p{N}_-][\p{L}\p{N}_.-]{0,254}$/u.test(h)))].slice(0, max)
+    : [];
+const keyList = (v: unknown, max: number): string[] =>
+  Array.isArray(v) ? [...new Set(v.filter((k): k is string => typeof k === "string" && /^\d{1,20}(:[^<>]{1,120})?$/.test(k)))].slice(0, max) : [];
 
-function num(value: unknown, fallback: number, min: number, max: number): number {
-  const n = typeof value === "string" ? Number(value) : value;
-  if (typeof n !== "number" || !Number.isFinite(n)) return fallback;
-  return Math.min(max, Math.max(min, Math.round(n)));
-}
-
-function oneOf<T extends string>(value: unknown, allowed: readonly T[], fallback: T): T {
-  return allowed.includes(value as T) ? (value as T) : fallback;
-}
-
-function color(value: unknown, fallback: string): string {
-  return typeof value === "string" && COLOR_RE.test(value.trim()) ? value.trim() : fallback;
-}
-
-function text(value: unknown, fallback: string, max: number): string {
-  return typeof value === "string" ? value.slice(0, max) : fallback;
-}
-
-function stringMap(value: unknown, validate: (v: string) => boolean, maxEntries: number): Record<string, string> {
+function colorMap(v: unknown): Record<string, string> {
   const out: Record<string, string> = {};
-  if (!value || typeof value !== "object" || Array.isArray(value)) return out;
-  let count = 0;
-  for (const [key, raw] of Object.entries(value as Record<string, unknown>)) {
-    if (count >= maxEntries) break;
-    if (typeof raw !== "string") continue;
-    const k = key.trim().toLowerCase().replace(/[<>]/g, "").slice(0, 80);
-    const v = raw.trim();
-    if (!k || !validate(v)) continue;
-    out[k] = v;
-    count += 1;
+  if (!v || typeof v !== "object") return out;
+  for (const [key, value] of Object.entries(v as Record<string, unknown>).slice(0, 1000)) {
+    if (typeof value !== "string") continue;
+    const k = key.replace(/[<>]/g, "").trim().toLowerCase().slice(0, 60);
+    const ok = value.length <= 120 && value.split("/").every((part) => COLOR_RE.test(part.trim()));
+    if (k && ok) out[k] = value;
   }
   return out;
 }
 
-const isCssColorList = (v: string) => v.split("/").every((part) => COLOR_RE.test(part.trim())) && v.length <= 120;
-const isHttpsUrl = (v: string) => /^https:\/\/[^\s"'<>]+$/i.test(v) && v.length <= 600;
-
-/** Merge stored (possibly partial or older) settings over the defaults, validating every field. */
-export function sanitizeSettings(raw: unknown): AppSettings {
-  let input: unknown = raw;
+function parse(raw: unknown): Record<string, any> {
+  let input = raw;
   if (typeof input === "string") {
     try {
       input = JSON.parse(input);
@@ -194,71 +195,145 @@ export function sanitizeSettings(raw: unknown): AppSettings {
       input = null;
     }
   }
-  const src = (input && typeof input === "object" ? input : {}) as Record<string, any>;
-  const d = DEFAULT_SETTINGS;
-  const g = (src.gallery ?? {}) as Record<string, unknown>;
-  const s = (src.swatches ?? {}) as Record<string, any>;
-  const p = (s.pill ?? {}) as Record<string, unknown>;
-  const c = (src.cards ?? {}) as Record<string, unknown>;
-  const a = (src.admin ?? {}) as Record<string, unknown>;
+  return input && typeof input === "object" ? (input as Record<string, any>) : {};
+}
 
+/** Merge stored (possibly partial or older) settings over the defaults, validating every field. */
+export function sanitizeSettings(raw: unknown): AppSettings {
+  const src = parse(raw);
+  const d = DEFAULT_SETTINGS;
+  const c = src.collections ?? {};
+  const pg = src.pages ?? {};
+  const sp = src.split ?? {};
+  const h = src.hide ?? {};
+  const o = src.order ?? {};
+  const cd = src.card ?? {};
+  const pa = src.paging ?? {};
+  const s = src.swatches ?? {};
+  const tx = src.texts ?? {};
+  const a = src.advanced ?? {};
+  const ad = src.admin ?? {};
   return {
-    v: 1,
-    gallery: {
-      enabled: bool(g.enabled, d.gallery.enabled),
-      hideUnassigned: bool(g.hideUnassigned, d.gallery.hideUnassigned),
-      noSelection: oneOf(g.noSelection, ["first", "all"] as const, d.gallery.noSelection),
-      showMainFirst: bool(g.showMainFirst, d.gallery.showMainFirst),
-      preventFlash: bool(g.preventFlash, d.gallery.preventFlash),
-      itemSelector: text(g.itemSelector, d.gallery.itemSelector, 300).replace(/[<>{}]/g, ""),
+    v: 2,
+    enabled: bool(src.enabled, d.enabled),
+    collections: { mode: oneOf(c.mode, ["all", "selected"] as const, d.collections.mode), handles: handleList(c.handles, 250) },
+    pages: {
+      allProducts: bool(pg.allProducts, d.pages.allProducts),
+      search: bool(pg.search, d.pages.search),
+      home: bool(pg.home, d.pages.home),
+    },
+    split: {
+      enabled: bool(sp.enabled, d.split.enabled),
+      by: oneOf(sp.by, SPLIT_BY, d.split.by),
+      title: plain(sp.title, d.split.title, 120) || d.split.title,
+    },
+    price: { format: oneOf(src.price?.format, PRICE_FORMATS, d.price.format) },
+    hide: { soldOut: bool(h.soldOut, d.hide.soldOut), noImage: bool(h.noImage, d.hide.noImage) },
+    order: { mix: bool(o.mix, d.order.mix), soldOutLast: bool(o.soldOutLast, d.order.soldOutLast) },
+    card: {
+      hideThemeSwatches: bool(cd.hideThemeSwatches, d.card.hideThemeSwatches),
+      secondImage: bool(cd.secondImage, d.card.secondImage),
+      soldOutBadge: bool(cd.soldOutBadge, d.card.soldOutBadge),
+      addToCart: bool(cd.addToCart, d.card.addToCart),
+    },
+    paging: {
+      mode: oneOf(pa.mode, ["theme", "load-more", "infinite"] as const, d.paging.mode),
+      scrollTop: bool(pa.scrollTop, d.paging.scrollTop),
     },
     swatches: {
       enabled: bool(s.enabled, d.swatches.enabled),
-      applyTo: oneOf(s.applyTo, ["color", "all", "custom"] as const, d.swatches.applyTo),
-      customOptions: Array.isArray(s.customOptions)
-        ? s.customOptions
-            .filter((o: unknown): o is string => typeof o === "string")
-            .map((o: string) => o.replace(/[<>]/g, "").slice(0, 60))
-            .slice(0, 10)
-        : [],
-      otherOptions: oneOf(s.otherOptions, ["native", "pills"] as const, d.swatches.otherOptions),
-      source: oneOf(s.source, ["auto", "color", "image"] as const, d.swatches.source),
+      options: oneOf(s.options, ["color", "all"] as const, d.swatches.options),
+      style: oneOf(s.style, ["auto", "button"] as const, d.swatches.style),
+      source: oneOf(s.source, ["color", "image"] as const, d.swatches.source),
       shape: oneOf(s.shape, ["circle", "rounded", "square"] as const, d.swatches.shape),
-      size: num(s.size, d.swatches.size, 16, 120),
-      gap: num(s.gap, d.swatches.gap, 0, 40),
-      borderWidth: num(s.borderWidth, d.swatches.borderWidth, 0, 6),
-      borderColor: color(s.borderColor, d.swatches.borderColor),
-      selectedColor: color(s.selectedColor, d.swatches.selectedColor),
-      ringOffset: num(s.ringOffset, d.swatches.ringOffset, 0, 8),
-      showLabel: bool(s.showLabel, d.swatches.showLabel),
-      tooltip: bool(s.tooltip, d.swatches.tooltip),
-      soldOut: oneOf(s.soldOut, ["cross", "fade", "hide"] as const, d.swatches.soldOut),
-      pill: {
-        radius: num(p.radius, d.swatches.pill.radius, 0, 40),
-        background: color(p.background, d.swatches.pill.background),
-        text: color(p.text, d.swatches.pill.text),
-        border: color(p.border, d.swatches.pill.border),
-        selectedBackground: color(p.selectedBackground, d.swatches.pill.selectedBackground),
-        selectedText: color(p.selectedText, d.swatches.pill.selectedText),
-        selectedBorder: color(p.selectedBorder, d.swatches.pill.selectedBorder),
-      },
-      colorMap: stringMap(s.colorMap, isCssColorList, 1000),
-      imageMap: stringMap(s.imageMap, isHttpsUrl, 300),
+      size: num(s.size, d.swatches.size, 12, 48),
+      max: num(s.max, d.swatches.max, 1, 20),
+      align: oneOf(s.align, ["left", "center", "right"] as const, d.swatches.align),
+      trigger: oneOf(s.trigger, ["hover", "click"] as const, d.swatches.trigger),
+      soldOut: oneOf(s.soldOut, ["fade", "cross", "hide"] as const, d.swatches.soldOut),
+      colorMap: colorMap(s.colorMap),
     },
-    cards: {
-      enabled: bool(c.enabled, d.cards.enabled),
-      size: num(c.size, d.cards.size, 12, 48),
-      max: num(c.max, d.cards.max, 1, 20),
-      shape: oneOf(c.shape, ["circle", "rounded", "square"] as const, d.cards.shape),
-      trigger: oneOf(c.trigger, ["hover", "click"] as const, d.cards.trigger),
-      align: oneOf(c.align, ["left", "center", "right"] as const, d.cards.align),
+    texts: {
+      from: plain(tx.from, ""),
+      soldOut: plain(tx.soldOut, ""),
+      sale: plain(tx.sale, ""),
+      addToCart: plain(tx.addToCart, ""),
+      added: plain(tx.added, ""),
+      viewCart: plain(tx.viewCart, ""),
+      loadMore: plain(tx.loadMore, ""),
+      loading: plain(tx.loading, ""),
+    },
+    advanced: {
+      preventFlash: bool(a.preventFlash, d.advanced.preventFlash),
+      gridSelector: selector(a.gridSelector),
+      cardSelector: selector(a.cardSelector),
+      // "<" is never needed in CSS and would let the value break out of its <style> tag.
+      customCss: text(a.customCss, "", 10000).replace(/</g, ""),
+      // Runs as the merchant's own code on their storefront; "</" would end the script tag.
+      customJs: text(a.customJs, "", 10000).replace(/<\//g, "<\\/"),
     },
     admin: {
-      syncVariantImages: bool(a.syncVariantImages, d.admin.syncVariantImages),
-      leading: oneOf(a.leading, ["shared", "first", "none"] as const, d.admin.leading),
-      assigned: bool(a.assigned, d.admin.assigned),
+      settingsSaved: bool(ad.settingsSaved, d.admin.settingsSaved),
+      previewed: bool(ad.previewed, d.admin.previewed),
+      themeChecked: bool(ad.themeChecked, d.admin.themeChecked),
+      themeId: typeof ad.themeId === "string" && /^gid:\/\/shopify\/OnlineStoreTheme\/\d+$/.test(ad.themeId) ? ad.themeId : "",
     },
-    // "<" is never needed in CSS and would let the value break out of its <style> tag.
-    customCss: text(src.customCss, d.customCss, 8000).replace(/</g, ""),
+  };
+}
+
+const nullableBool = (v: unknown): boolean | null => (typeof v === "boolean" ? v : null);
+
+export function sanitizeCollectionSettings(raw: unknown): CollectionSettings {
+  const src = parse(raw);
+  return {
+    v: 1,
+    enabled: nullableBool(src.enabled),
+    split: nullableBool(src.split),
+    by: typeof src.by === "string" && (SPLIT_BY as readonly string[]).includes(src.by) ? (src.by as SplitBy) : null,
+    title: typeof src.title === "string" && src.title.trim() ? plain(src.title, "", 120) : null,
+    price: typeof src.price === "string" && (PRICE_FORMATS as readonly string[]).includes(src.price) ? (src.price as PriceFormat) : null,
+    hideSoldOut: nullableBool(src.hideSoldOut),
+    hideNoImage: nullableBool(src.hideNoImage),
+    mix: nullableBool(src.mix),
+    order: keyList(src.order, 1000),
+    hidden: keyList(src.hidden, 1000),
+  };
+}
+
+/** True when a collection has no overrides at all (its metafield can be deleted). */
+export function isDefaultCollectionSettings(settings: CollectionSettings): boolean {
+  const { v: _v, order, hidden, ...rest } = settings;
+  return !order.length && !hidden.length && Object.values(rest).every((value) => value === null);
+}
+
+/** What actually applies on a collection page: collection overrides over the shop settings. */
+export interface EffectiveSettings {
+  enabled: boolean;
+  split: boolean;
+  by: SplitBy;
+  title: string;
+  price: PriceFormat;
+  hideSoldOut: boolean;
+  hideNoImage: boolean;
+  mix: boolean;
+  soldOutLast: boolean;
+  order: string[];
+  hidden: string[];
+}
+
+export function effectiveSettings(shop: AppSettings, collection: CollectionSettings | null): EffectiveSettings {
+  const c = collection ?? EMPTY_COLLECTION_SETTINGS;
+  return {
+    enabled: c.enabled ?? true,
+    split: c.split ?? shop.split.enabled,
+    by: c.by ?? shop.split.by,
+    title: c.title ?? shop.split.title,
+    price: c.price ?? shop.price.format,
+    hideSoldOut: c.hideSoldOut ?? shop.hide.soldOut,
+    hideNoImage: c.hideNoImage ?? shop.hide.noImage,
+    mix: c.mix ?? shop.order.mix,
+    soldOutLast: shop.order.soldOutLast,
+    order: c.order,
+    hidden: c.hidden,
   };
 }

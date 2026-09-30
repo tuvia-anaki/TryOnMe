@@ -1,48 +1,45 @@
 # App Store listing (draft)
 
 > Shopify's naming rule: the app name must lead with a distinctive brand and be ≤ 30 characters.
-> "Prism" is a placeholder brand — check that it's unique in the App Store before submitting.
+> "Variant Cards" is a working name — check that it's unique in the App Store before submitting.
 
-**App name:** Prism Variant Images & Swatch (29 characters)
+**App name:** Variant Cards: Show Variants (28 characters)
 
-**App card subtitle:** Show only the selected variant's photos, plus color swatches — free for every store
+**App card subtitle:** Show each color as its own product on collection pages — free for every store
 
 **App introduction (≤100 chars):**
-Shoppers see only the photos of the color they pick, so product pages are clearer and returns drop.
+Every color gets its own card on your collection pages, so shoppers see your whole range at a glance.
 
 **App details (≤500 chars):**
-Assign as many images, videos or 3D models to each variant as you like — or let the app match them automatically by variant image order, alt text, file name or the colors in your photos. When a shopper picks a color, the gallery, thumbnails and zoom show only that color's media. Add color, image or button swatches to product pages and color dots to collection cards. Works with Online Store 2.0 themes without code. Every feature is free, with no product limits.
+Show each variant — usually each color — as its own product card on collection and search pages, with its own image, title, price and link, in your theme's own card design. Choose the collections, hide sold-out variants, mix colors of different products, set a manual card order per collection, and add color swatches, add-to-cart buttons, load more and infinite scroll. Add best sellers, featured collections, related products and promo tiles. Every feature is free.
 
 **Feature list (≤80 chars each):**
-- Show only the selected variant's images in the gallery, thumbnails and zoom
-- Assign multiple images, videos and 3D models to each variant or option
-- Auto-assign by variant image order, alt text, file name or photo colors
-- Bulk auto-assign your whole catalog, then fine-tune any product
-- Color, image and button swatches that keep your theme's picker working
-- Color swatches on collection and search product cards
-- Keeps each variant's Shopify image in sync for cart and checkout
-- Free for all stores: unlimited products, no plans
+- Show each color (or any option) as its own card on collection pages
+- Works with your theme's cards, filters and sorting — no code
+- Custom titles and price ranges; hide sold-out or image-less variants
+- Per-collection settings with drag-and-drop card order
+- Color swatches, add to cart, load more and infinite scroll on cards
+- Best sellers, featured collection, related products and promo card sections
+- Free for all stores: unlimited collections, no plans
 
 **Pricing:** Free
 
-**Categories:** Product variants (Selling products) · Image gallery (Store design)
+**Categories:** Product variants (Selling products) · Collections (Store design)
 
-**Search terms:** variant images, color swatches, product gallery, variant swatch, product images
+**Search terms:** show variants, variants on collection, split variants, color swatches, collection page
 
-**Integrations to list:** Dawn and free Shopify themes, Horizon, Swiper/Flickity/Slick-based themes
+## Test instructions for reviewers
 
-## Test instructions for the reviewer
+1. Open the app: the dashboard's setup guide shows the steps.
+2. Step 1 opens the theme editor with the "Variant Cards" app embed turned on — press Save.
+3. Open any collection with products that have a color option: each color shows as its own card.
+4. Settings → change the card title or price format; Collections → open a collection to reorder or hide cards.
+5. Sections → "Add" opens the theme editor with the section added.
 
-1. Install the app on the review store and open it. The home page shows the setup steps.
-2. Click **Turn on in theme editor**, make sure *Variant images* is on under App embeds, and save the theme.
-3. Go to **Products**, open a product with several colors (the review store needs one with at least two color variants and a few images per color), click **Auto-assign → Automatic (best match)** and **Save**.
-4. Open the product on the storefront and switch colors: only that color's images show. Shared images (e.g. a size chart) stay visible.
-5. Optional: **Swatches** → turn on swatches → Save; reload the product page to see color swatches.
+## Screenshots (ideas)
 
-## Screenshots to capture (1600×900)
-
-1. Product editor with groups (color dots), media grid and "Main" badges
-2. Storefront product page before/after selecting a color
-3. Swatches designer with live preview
-4. Bulk auto-assign results
-5. Collection page with color dots on product cards
+1. A collection page before/after: one card per product vs. one card per color.
+2. The dashboard with the setup guide.
+3. A collection's card order editor (drag and drop).
+4. Swatches under cards.
+5. The Best sellers section as a carousel.

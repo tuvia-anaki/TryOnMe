@@ -1,0 +1,17 @@
+{
+  "texts": {
+    "from": "Từ {price}",
+    "sold_out": "Hết hàng",
+    "sale": "Giảm giá",
+    "add_to_cart": "Thêm vào giỏ hàng",
+    "choose_options": "Chọn tùy chọn",
+    "added": "Đã thêm vào giỏ hàng",
+    "view_cart": "Xem giỏ hàng",
+    "load_more": "Tải thêm",
+    "loading": "Đang tải…",
+    "view_all": "Xem tất cả",
+    "previous": "Trước",
+    "next": "Tiếp",
+    "example_product": "Sản phẩm mẫu"
+  }
+}

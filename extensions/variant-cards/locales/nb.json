@@ -1,0 +1,17 @@
+{
+  "texts": {
+    "from": "Fra {price}",
+    "sold_out": "Utsolgt",
+    "sale": "Salg",
+    "add_to_cart": "Legg i handlekurv",
+    "choose_options": "Velg alternativer",
+    "added": "Lagt i handlekurven",
+    "view_cart": "Se handlekurv",
+    "load_more": "Last inn flere",
+    "loading": "Laster inn…",
+    "view_all": "Se alle",
+    "previous": "Forrige",
+    "next": "Neste",
+    "example_product": "Eksempelprodukt"
+  }
+}

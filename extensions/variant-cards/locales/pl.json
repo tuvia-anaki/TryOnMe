@@ -1,0 +1,17 @@
+{
+  "texts": {
+    "from": "Od {price}",
+    "sold_out": "Wyprzedane",
+    "sale": "Promocja",
+    "add_to_cart": "Dodaj do koszyka",
+    "choose_options": "Wybierz opcje",
+    "added": "Dodano do koszyka",
+    "view_cart": "Zobacz koszyk",
+    "load_more": "Załaduj więcej",
+    "loading": "Ładowanie…",
+    "view_all": "Zobacz wszystkie",
+    "previous": "Poprzedni",
+    "next": "Następny",
+    "example_product": "Przykładowy produkt"
+  }
+}

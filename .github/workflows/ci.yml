@@ -21,4 +21,4 @@ jobs:
         env:
           SHOPIFY_API_KEY: ci-placeholder
       - name: Storefront assets are committed and up to date
-        run: git diff --exit-code -- extensions/variant-images/assets
+        run: git diff --exit-code -- extensions/variant-cards/assets

@@ -1,0 +1,17 @@
+{
+  "texts": {
+    "from": "{price} से शुरू",
+    "sold_out": "स्टॉक में नहीं",
+    "sale": "सेल",
+    "add_to_cart": "कार्ट में जोड़ें",
+    "choose_options": "विकल्प चुनें",
+    "added": "कार्ट में जोड़ा गया",
+    "view_cart": "कार्ट देखें",
+    "load_more": "और लोड करें",
+    "loading": "लोड हो रहा है…",
+    "view_all": "सभी देखें",
+    "previous": "पिछला",
+    "next": "अगला",
+    "example_product": "उदाहरण उत्पाद"
+  }
+}

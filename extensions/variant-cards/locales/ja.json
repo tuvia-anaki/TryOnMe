@@ -1,0 +1,17 @@
+{
+  "texts": {
+    "from": "{price}から",
+    "sold_out": "売り切れ",
+    "sale": "セール",
+    "add_to_cart": "カートに追加",
+    "choose_options": "オプションを選択",
+    "added": "カートに追加しました",
+    "view_cart": "カートを見る",
+    "load_more": "もっと見る",
+    "loading": "読み込み中…",
+    "view_all": "すべて表示",
+    "previous": "前へ",
+    "next": "次へ",
+    "example_product": "サンプル商品"
+  }
+}

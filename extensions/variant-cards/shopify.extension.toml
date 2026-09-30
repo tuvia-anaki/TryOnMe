@@ -1,0 +1,7 @@
+# Theme app extension: variant cards on collection/search pages (app embed)
+# and the app's sections. Scripts are built from src/storefront by
+# `npm run build:storefront`.
+name = "Variant Cards"
+type = "theme"
+handle = "variant-cards"
+uid = "9827b57a-d8a6-43e3-9ddb-91a8f657d85a"

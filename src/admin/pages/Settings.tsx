@@ -1,206 +1,31 @@
-import { useRef, useState } from "preact/hooks";
-import { PRODUCT_CONFIG_KEY, PRODUCT_CONFIG_NAMESPACE } from "../../shared/config";
-import { sanitizeSettings, type AppSettings } from "../../shared/settings";
-import { gql, throwUserErrors, type UserError } from "../api/graphql";
-import { loadAppContext, saveSettings, type AppContext } from "../api/settings";
+import { TITLE_PRESETS, type PagingMode, type PriceFormat, type Texts } from "../../shared/settings";
 import { ErrorBanner, Loading } from "../components/common";
-import { formatNumber, t } from "../i18n";
-import { toast, useAsync, useSaveBar } from "../lib/hooks";
+import { Area, Card, Check, Select, Text, Toggle } from "../components/fields";
+import { msg, t } from "../i18n";
+import { useSettingsDraft } from "../lib/draft";
+import { splitByOptions, titleOptions } from "./Dashboard";
 
-const val = (event: Event): string => String((event.currentTarget as any)?.value ?? "");
-const checked = (event: Event): boolean => !!(event.currentTarget as any)?.checked;
+const CUSTOM = "__custom__";
 
-/** Delete every product's variant image setup (used before uninstalling, or to start over). */
-async function removeAllAssignments(onProgress: (removed: number) => void, shouldStop: () => boolean): Promise<number> {
-  let after: string | null = null;
-  let removed = 0;
-  for (;;) {
-    const data: any = await gql(
-      `#graphql
-      query ConfiguredProducts($after: String) {
-        products(first: 100, after: $after) {
-          pageInfo { hasNextPage endCursor }
-          nodes { id config: metafield(namespace: "${PRODUCT_CONFIG_NAMESPACE}", key: "${PRODUCT_CONFIG_KEY}") { id } }
-        }
-      }`,
-      { after },
-    );
-    const owners: string[] = data.products.nodes.filter((n: any) => n.config).map((n: any) => n.id);
-    for (let i = 0; i < owners.length; i += 25) {
-      const batch = owners.slice(i, i + 25).map((ownerId) => ({ ownerId, namespace: PRODUCT_CONFIG_NAMESPACE, key: PRODUCT_CONFIG_KEY }));
-      const result = await gql<{ metafieldsDelete: { userErrors: UserError[] } }>(
-        `#graphql
-        mutation DeleteVariantImages($metafields: [MetafieldIdentifierInput!]!) {
-          metafieldsDelete(metafields: $metafields) { deletedMetafields { key } userErrors { field message } }
-        }`,
-        { metafields: batch },
-      );
-      throwUserErrors(result.metafieldsDelete.userErrors, "Couldn't remove variant images");
-      removed += batch.length;
-      onProgress(removed);
-    }
-    if (shouldStop() || !data.products.pageInfo.hasNextPage) break;
-    after = data.products.pageInfo.endCursor;
-  }
-  return removed;
-}
+const TEXT_FIELDS: [keyof Texts, string, string][] = [
+  ["from", msg("Price when variants cost different amounts"), "From {price}"],
+  ["soldOut", msg("Sold out"), "Sold out"],
+  ["sale", msg("Sale badge"), "Sale"],
+  ["addToCart", msg("Add to cart button"), "Add to cart"],
+  ["added", msg("After adding to cart"), "Added to cart"],
+  ["viewCart", msg("View cart link"), "View cart"],
+  ["loadMore", msg("Load more button"), "Load more"],
+  ["loading", msg("While loading"), "Loading…"],
+];
 
-function SettingsForm({ context }: { context: AppContext }) {
-  const [draft, setDraft] = useState<AppSettings>(context.settings);
-  const [saved, setSaved] = useState<AppSettings>(context.settings);
-  const [saving, setSaving] = useState(false);
-  const [cleanup, setCleanup] = useState<{ running: boolean; removed: number; done: boolean }>({ running: false, removed: 0, done: false });
-  const stop = useRef(false);
-  const modalRef = useRef<any>(null);
-  const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
-  const g = draft.gallery;
-  const a = draft.admin;
-
-  const updateGallery = (patch: Partial<AppSettings["gallery"]>) => setDraft((d) => sanitizeSettings({ ...d, gallery: { ...d.gallery, ...patch } }));
-  const updateAdmin = (patch: Partial<AppSettings["admin"]>) => setDraft((d) => sanitizeSettings({ ...d, admin: { ...d.admin, ...patch } }));
-
-  const save = async () => {
-    setSaving(true);
-    try {
-      const clean = await saveSettings(context, draft);
-      setDraft(clean);
-      setSaved(clean);
-      toast(t("Saved"));
-    } catch (error) {
-      toast((error as Error).message, true);
-    } finally {
-      setSaving(false);
-    }
-  };
-  useSaveBar("pvi-settings-save-bar", dirty, saving, { onSave: () => void save(), onDiscard: () => setDraft(saved) }, { save: t("Save"), discard: t("Discard") });
-
-  const runCleanup = async () => {
-    modalRef.current?.hideOverlay?.();
-    stop.current = false;
-    setCleanup({ running: true, removed: 0, done: false });
-    try {
-      const removed = await removeAllAssignments(
-        (n) => setCleanup((c) => ({ ...c, removed: n })),
-        () => stop.current,
-      );
-      setCleanup({ running: false, removed, done: true });
-      toast(t("Removed variant images from {count} products.", { count: formatNumber(removed) }));
-    } catch (error) {
-      setCleanup((c) => ({ ...c, running: false }));
-      toast((error as Error).message, true);
-    }
-  };
-
-  return (
-    <s-page heading={t("Settings")} inlineSize="base">
-      <s-button slot="primary-action" variant="primary" disabled={!dirty || saving} loading={saving} onClick={() => void save()}>
-        {t("Save")}
-      </s-button>
-
-      <s-section heading={t("Product gallery")}>
-        <s-stack direction="block" gap="base">
-          <s-switch label={t("Show only the selected variant's images")} checked={g.enabled} onChange={(event) => updateGallery({ enabled: checked(event) })} />
-          <s-switch
-            label={t("Hide images that aren't assigned to any variant")}
-            details={t("Off: images you didn't assign (like a size chart) show for every variant. Images marked “All variants (shared)” always show.")}
-            checked={g.hideUnassigned}
-            onChange={(event) => updateGallery({ hideUnassigned: checked(event) })}
-          />
-          <s-select label={t("When a product page opens without a selected variant")} value={g.noSelection} onChange={(event) => updateGallery({ noSelection: val(event) as any })}>
-            <s-option value="first">{t("Show the first available variant's images")}</s-option>
-            <s-option value="all">{t("Show all images")}</s-option>
-          </s-select>
-          <s-switch
-            label={t("Jump to the variant's main image when a shopper picks a variant")}
-            checked={g.showMainFirst}
-            onChange={(event) => updateGallery({ showMainFirst: checked(event) })}
-          />
-          <s-switch
-            label={t("Prevent flicker while the page loads")}
-            details={t("Hides other variants' images before the script runs, on themes that support it.")}
-            checked={g.preventFlash}
-            onChange={(event) => updateGallery({ preventFlash: checked(event) })}
-          />
-        </s-stack>
-      </s-section>
-
-      <s-section heading={t("Saving and auto-assign")}>
-        <s-stack direction="block" gap="base">
-          <s-switch
-            label={t("Set each variant's Shopify image to its main image when saving")}
-            details={t("Keeps cart, checkout, order and Google Shopping images in sync with what shoppers see.")}
-            checked={a.syncVariantImages}
-            onChange={(event) => updateAdmin({ syncVariantImages: checked(event) })}
-          />
-          <s-select
-            label={t("Auto-assign: images placed before the first variant image")}
-            value={a.leading}
-            onChange={(event) => updateAdmin({ leading: val(event) as any })}
-          >
-            <s-option value="shared">{t("Show for every variant (shared)")}</s-option>
-            <s-option value="first">{t("Belong to the first variant")}</s-option>
-            <s-option value="none">{t("Leave unassigned")}</s-option>
-          </s-select>
-        </s-stack>
-      </s-section>
-
-      <s-section heading={t("Theme compatibility (advanced)")}>
-        <s-stack direction="block" gap="base">
-          <s-paragraph color="subdued">
-            {t("The app finds your theme's gallery automatically. Only if it can't, enter a CSS selector that matches one gallery item (a slide or thumbnail).")}
-          </s-paragraph>
-          <s-text-field
-            label={t("Gallery item selector")}
-            placeholder=".product-gallery__item"
-            value={g.itemSelector}
-            onChange={(event) => updateGallery({ itemSelector: val(event) })}
-          />
-          <s-text-area
-            label={t("Custom CSS")}
-            rows={6}
-            value={draft.customCss}
-            details={t("Loaded on pages where the app runs. Swatches can be styled with CSS variables like --pvi-size or ::part(swatch).")}
-            onChange={(event) => setDraft((d) => ({ ...d, customCss: val(event) }))}
-          />
-        </s-stack>
-      </s-section>
-
-      <s-section heading={t("Remove all data")}>
-        <s-stack direction="block" gap="base">
-          <s-paragraph color="subdued">
-            {t("Deletes the variant image setup from every product. Your product images themselves are never touched. Shopify also removes this data automatically some time after you uninstall the app.")}
-          </s-paragraph>
-          <s-stack direction="inline" gap="small-200" alignItems="center">
-            <s-button tone="critical" commandFor="pvi-cleanup-modal" disabled={cleanup.running}>
-              {t("Remove all variant image assignments")}
-            </s-button>
-            {cleanup.running && (
-              <>
-                <s-text color="subdued">{t("Removed from {count} products…", { count: formatNumber(cleanup.removed) })}</s-text>
-                <s-button variant="tertiary" onClick={() => (stop.current = true)}>
-                  {t("Stop")}
-                </s-button>
-              </>
-            )}
-            {cleanup.done && !cleanup.running && <s-text color="subdued">{t("Done.")}</s-text>}
-          </s-stack>
-        </s-stack>
-        <s-modal id="pvi-cleanup-modal" heading={t("Remove all assignments?")} ref={modalRef}>
-          <s-paragraph>{t("Every product will show all of its images again. This can't be undone.")}</s-paragraph>
-          <s-button slot="primary-action" tone="critical" variant="primary" onClick={() => void runCleanup()}>
-            {t("Remove all")}
-          </s-button>
-          <s-button slot="secondary-actions" commandFor="pvi-cleanup-modal" command="--hide">
-            {t("Cancel")}
-          </s-button>
-        </s-modal>
-      </s-section>
-    </s-page>
-  );
+interface PickedCollection {
+  handle: string;
+  title?: string;
 }
 
 export function Settings() {
-  const context = useAsync(() => loadAppContext(), []);
+  const { context, draft, patch, saving, save } = useSettingsDraft("vc-settings-save-bar");
+
   if (context.error) {
     return (
       <s-page heading={t("Settings")}>
@@ -208,12 +33,200 @@ export function Settings() {
       </s-page>
     );
   }
-  if (!context.data) {
+  if (!draft) {
     return (
       <s-page heading={t("Settings")}>
         <Loading />
       </s-page>
     );
   }
-  return <SettingsForm context={context.data} />;
+  const s = draft;
+  const isPreset = (TITLE_PRESETS as readonly string[]).includes(s.split.title);
+
+  const pickCollections = async () => {
+    const picker = window.shopify?.resourcePicker;
+    if (!picker) return;
+    const picked = (await picker({ type: "collection", multiple: true, action: "select" })) as PickedCollection[] | undefined;
+    if (!picked?.length) return;
+    const handles = [...new Set([...s.collections.handles, ...picked.map((c) => c.handle).filter(Boolean)])];
+    patch("collections", { handles });
+  };
+
+  return (
+    <s-page heading={t("Settings")} inlineSize="base">
+      <s-button slot="primary-action" variant="primary" loading={saving} onClick={() => void save()}>
+        {t("Save")}
+      </s-button>
+      <s-stack direction="block" gap="base">
+        <Card heading={t("Where variant cards show")}>
+          <Select
+            label={t("Collections")}
+            value={s.collections.mode}
+            options={[
+              ["all", t("All collections")],
+              ["selected", t("Only the collections I choose")],
+            ]}
+            onChange={(mode) => patch("collections", { mode })}
+          />
+          {s.collections.mode === "selected" && (
+            <s-stack direction="block" gap="small-200">
+              {s.collections.handles.length ? (
+                <s-stack direction="inline" gap="small-200">
+                  {s.collections.handles.map((handle) => (
+                    <s-chip key={handle} removable onRemove={() => patch("collections", { handles: s.collections.handles.filter((h) => h !== handle) })}>
+                      {handle}
+                    </s-chip>
+                  ))}
+                </s-stack>
+              ) : (
+                <s-text color="subdued">{t("No collections chosen yet.")}</s-text>
+              )}
+              <s-stack direction="inline">
+                <s-button onClick={() => void pickCollections()}>{t("Choose collections")}</s-button>
+              </s-stack>
+            </s-stack>
+          )}
+          <Check label={t("All products page (/collections/all)")} checked={s.pages.allProducts} onChange={(allProducts) => patch("pages", { allProducts })} />
+          <Check label={t("Search results")} checked={s.pages.search} onChange={(search) => patch("pages", { search })} />
+          <Check
+            label={t("Product grids on the home page")}
+            details={t("Featured collection sections of your theme.")}
+            checked={s.pages.home}
+            onChange={(home) => patch("pages", { home })}
+          />
+        </Card>
+
+        <Card heading={t("Variant cards")} description={t("Each variant card shows its own image, title, price and link, in your theme's own card design.")}>
+          <Toggle label={t("Show each variant as its own card")} checked={s.split.enabled} onChange={(enabled) => patch("split", { enabled })} />
+          <Select
+            label={t("Split products by")}
+            value={s.split.by}
+            options={splitByOptions()}
+            details={t("Color (automatic) finds the color option in any language; products without one stay as one card.")}
+            disabled={!s.split.enabled}
+            onChange={(by) => patch("split", { by })}
+          />
+          <Select
+            label={t("Card title")}
+            value={isPreset ? s.split.title : CUSTOM}
+            options={[...titleOptions(isPreset ? s.split.title : TITLE_PRESETS[0]), [CUSTOM, t("Custom…")]]}
+            disabled={!s.split.enabled}
+            onChange={(value) => patch("split", { title: value === CUSTOM ? "{product} · {value}" : value })}
+          />
+          {!isPreset && (
+            <Text
+              label={t("Custom title")}
+              value={s.split.title}
+              details={t("Use {product}, {value} (the color), {variant}, {option1}, {option2}, {option3}, {vendor} and {type}.")}
+              onChange={(title) => patch("split", { title })}
+            />
+          )}
+          <Select<PriceFormat>
+            label={t("Price when a card's variants cost different amounts")}
+            value={s.price.format}
+            options={[
+              ["theme", t("Like the theme (From $10)")],
+              ["from", t("From the lowest price")],
+              ["range", t("Price range ($10 – $15)")],
+            ]}
+            onChange={(format) => patch("price", { format })}
+          />
+        </Card>
+
+        <Card heading={t("Hide and sort")}>
+          <Check label={t("Hide sold-out variants")} details={t("A product whose variants are all sold out keeps one card.")} checked={s.hide.soldOut} onChange={(soldOut) => patch("hide", { soldOut })} />
+          <Check
+            label={t("Hide variants without their own image")}
+            details={t("Variants that would show the product's main image instead of their own.")}
+            checked={s.hide.noImage}
+            onChange={(noImage) => patch("hide", { noImage })}
+          />
+          <Check
+            label={t("Mix variants of different products")}
+            details={t("Show every product's first color, then every product's second color… instead of keeping a product's colors together.")}
+            checked={s.order.mix}
+            onChange={(mix) => patch("order", { mix })}
+          />
+          <Check label={t("Show sold-out cards last")} checked={s.order.soldOutLast} onChange={(soldOutLast) => patch("order", { soldOutLast })} />
+        </Card>
+
+        <Card heading={t("On each card")}>
+          <Check
+            label={t("Hide the theme's color swatches on variant cards")}
+            details={t("They'd list every color on a card that shows one.")}
+            checked={s.card.hideThemeSwatches}
+            onChange={(hideThemeSwatches) => patch("card", { hideThemeSwatches })}
+          />
+          <Check
+            label={t("Keep the theme's second image on hover")}
+            details={t("Usually another color's photo, so it's off by default.")}
+            checked={s.card.secondImage}
+            onChange={(secondImage) => patch("card", { secondImage })}
+          />
+          <Check label={t("Show a “Sold out” badge on sold-out variant cards")} checked={s.card.soldOutBadge} onChange={(soldOutBadge) => patch("card", { soldOutBadge })} />
+          <Check
+            label={t("Add to cart button")}
+            details={t("Cards with sizes to choose from get “Choose options”, which opens the product with the color selected.")}
+            checked={s.card.addToCart}
+            onChange={(addToCart) => patch("card", { addToCart })}
+          />
+        </Card>
+
+        <Card heading={t("Loading more products")}>
+          <Select<PagingMode>
+            label={t("On collection and search pages")}
+            value={s.paging.mode}
+            options={[
+              ["theme", t("Theme's pagination")],
+              ["load-more", t("“Load more” button")],
+              ["infinite", t("Infinite scroll")],
+            ]}
+            onChange={(mode) => patch("paging", { mode })}
+          />
+          <Check label={t("“Back to top” button")} checked={s.paging.scrollTop} onChange={(scrollTop) => patch("paging", { scrollTop })} />
+        </Card>
+
+        <Card heading={t("Storefront texts")} description={t("Leave a field empty to use the default in your store's language.")}>
+          <s-query-container>
+            <s-grid gridTemplateColumns="@container (inline-size <= 520px) 1fr, 1fr 1fr" gap="base">
+              {TEXT_FIELDS.map(([key, label, placeholder]) => (
+                <Text key={key} label={t(label)} value={s.texts[key]} placeholder={placeholder} maxLength={80} onChange={(value) => patch("texts", { [key]: value })} />
+              ))}
+            </s-grid>
+          </s-query-container>
+        </Card>
+
+        <Card heading={t("Advanced")}>
+          <Toggle
+            label={t("Hide the product grid until variant cards are ready")}
+            details={t("Prevents a flash of the original cards on slower themes (never longer than 2.5 seconds).")}
+            checked={s.advanced.preventFlash}
+            onChange={(preventFlash) => patch("advanced", { preventFlash })}
+          />
+          <Text
+            label={t("Product grid selector")}
+            value={s.advanced.gridSelector}
+            placeholder="#product-grid"
+            details={t("Only if the app doesn't find your theme's product grid on its own.")}
+            onChange={(gridSelector) => patch("advanced", { gridSelector })}
+          />
+          <Text
+            label={t("Product card selector")}
+            value={s.advanced.cardSelector}
+            placeholder=".product-card"
+            details={t("Only if cards aren't detected: a CSS selector matching one product card.")}
+            onChange={(cardSelector) => patch("advanced", { cardSelector })}
+          />
+          <Area label={t("Custom CSS")} value={s.advanced.customCss} placeholder=".vc-badge { background: #000; color: #fff; }" onChange={(customCss) => patch("advanced", { customCss })} />
+          <Area
+            label={t("Custom JavaScript")}
+            value={s.advanced.customJs}
+            placeholder="document.addEventListener('vc:render', (event) => { … });"
+            details={t("Runs on your storefront after the app starts. Events: vc:ready, vc:render, vc:cart-add.")}
+            onChange={(customJs) => patch("advanced", { customJs })}
+          />
+        </Card>
+      </s-stack>
+    </s-page>
+  );
 }

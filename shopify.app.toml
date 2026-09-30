@@ -1,4 +1,4 @@
-# Prism Variant Images — Shopify app configuration.
+# Variant Cards — Shopify app configuration.
 #
 # This is the same Shopify app that was "tryon" (same client id, same
 # installs); deploying this config renames it and replaces the try-on code.
@@ -7,7 +7,7 @@
 # in package.json; Render deploys on every push to main). See README.md.
 
 client_id = "de2bb6df4fa93a082338e0276869c84f"
-name = "Prism Variant Images"
+name = "Variant Cards"
 application_url = "https://tryonme.onrender.com"
 embedded = true
 
@@ -17,9 +17,9 @@ embedded = true
 automatically_update_urls_on_dev = false
 
 [access_scopes]
-# read/write_products: read variants + media, save variant image assignments
-#   (product metafields) and set each variant's native image.
-# read_themes: check that the app embed is turned on in the live theme.
+# read/write_products: read products and collections, save per-collection
+#   settings (collection metafields) and create the "Best sellers" collection.
+# read_themes: check the app embed and sections in the merchant's themes.
 scopes = "read_products,write_products,read_themes"
 
 [access.admin]

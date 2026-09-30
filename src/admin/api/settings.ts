@@ -1,4 +1,4 @@
-import { SETTINGS_KEY, SETTINGS_NAMESPACE } from "../../shared/config";
+import { SETTINGS_KEY, SETTINGS_NAMESPACE } from "../../shared/constants";
 import { sanitizeSettings, type AppSettings } from "../../shared/settings";
 import { gql, throwUserErrors, type UserError } from "./graphql";
 
@@ -10,6 +10,8 @@ import { gql, throwUserErrors, type UserError } from "./graphql";
 
 export interface AppContext {
   installationId: string;
+  /** The app's handle, as it appears in theme files ("shopify://apps/<handle>/blocks/…"). */
+  appHandle: string;
   settings: AppSettings;
   settingsSaved: boolean;
   shop: { name: string; domain: string; url: string | null };
@@ -19,6 +21,7 @@ const CONTEXT_QUERY = `#graphql
 query AppContext {
   currentAppInstallation {
     id
+    app { handle }
     settings: metafield(namespace: "${SETTINGS_NAMESPACE}", key: "${SETTINGS_KEY}") { value updatedAt }
   }
   shop { name myshopifyDomain primaryDomain { url } }
@@ -37,10 +40,11 @@ let cached: Promise<AppContext> | null = null;
 export function loadAppContext(force = false): Promise<AppContext> {
   if (!cached || force) {
     cached = gql<{
-      currentAppInstallation: { id: string; settings: { value: string } | null };
+      currentAppInstallation: { id: string; app: { handle: string }; settings: { value: string } | null };
       shop: { name: string; myshopifyDomain: string; primaryDomain: { url: string } | null };
     }>(CONTEXT_QUERY).then((data) => ({
       installationId: data.currentAppInstallation.id,
+      appHandle: data.currentAppInstallation.app.handle,
       settings: sanitizeSettings(data.currentAppInstallation.settings?.value ?? null),
       settingsSaved: !!data.currentAppInstallation.settings,
       shop: {
@@ -75,16 +79,3 @@ export async function saveSettings(context: AppContext, next: AppSettings): Prom
   return clean;
 }
 
-/**
- * Remember, shop-wide, that variant images were assigned at least once, so the
- * setup guide can tick that step even when the product isn't on the first page.
- */
-export async function markAssigned(): Promise<void> {
-  try {
-    const context = await loadAppContext(true);
-    if (context.settings.admin.assigned) return;
-    await saveSettings(context, { ...context.settings, admin: { ...context.settings.admin, assigned: true } });
-  } catch {
-    /* Only the setup guide uses this; it also looks at recently edited products. */
-  }
-}

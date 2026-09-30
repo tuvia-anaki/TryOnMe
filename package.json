@@ -1,5 +1,5 @@
 {
-  "name": "prism-variant-images",
+  "name": "variant-cards",
   "version": "1.0.0",
   "private": true,
   "type": "module",
@@ -18,10 +18,9 @@
     "deploy": "node scripts/check-app-url.mjs && npm run build:storefront && shopify app deploy",
     "deploy:worker": "npm run build && wrangler deploy",
     "config:link": "shopify app config link",
-    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p extensions/product-block/tsconfig.json && tsc --noEmit -p extensions/bulk-action/tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
     "test:watch": "vitest",
-    "harness": "node scripts/harness.mjs",
     "check": "npm run typecheck && npm test && npm run build"
   },
   "dependencies": {
@@ -39,8 +38,5 @@
     "typescript": "~5.9.3",
     "vitest": "^5.0.2",
     "wrangler": "^4.143.0"
-  },
-  "workspaces": [
-    "extensions/*"
-  ]
+  }
 }

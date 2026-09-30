@@ -1,0 +1,17 @@
+{
+  "texts": {
+    "from": "Alkaen {price}",
+    "sold_out": "Loppuunmyyty",
+    "sale": "Ale",
+    "add_to_cart": "Lisää ostoskoriin",
+    "choose_options": "Valitse vaihtoehdot",
+    "added": "Lisätty ostoskoriin",
+    "view_cart": "Näytä ostoskori",
+    "load_more": "Lataa lisää",
+    "loading": "Ladataan…",
+    "view_all": "Näytä kaikki",
+    "previous": "Edellinen",
+    "next": "Seuraava",
+    "example_product": "Esimerkkituote"
+  }
+}

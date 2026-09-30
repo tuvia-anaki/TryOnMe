@@ -1,0 +1,129 @@
+{%- comment -%}
+  Variant Cards app embed. Prints the shop's settings (app-data metafield),
+  this collection's overrides (app-owned collection metafield) and price
+  samples for the storefront script, and hides the product grid until its
+  cards are split (no flash of the original cards). No app server involved.
+{%- endcomment -%}
+{%- liquid
+  assign vc = app.metafields.variant_cards.settings.value
+  assign vc_type = template.name
+  assign vc_collection = nil
+  assign vc_collection_settings = nil
+  if template.name == 'collection' and collection
+    assign vc_collection = collection
+    assign vc_collection_settings = collection.metafields['$app:variant_cards'].settings.value
+  endif
+
+  # Is this a page the app works on? (Unsaved settings = the defaults.)
+  assign vc_on = true
+  if vc.enabled == false
+    assign vc_on = false
+  endif
+  if vc_collection_settings.enabled == false
+    assign vc_on = false
+  endif
+  assign vc_page = false
+  case vc_type
+    when 'collection'
+      if vc_collection.handle == 'all'
+        unless vc.pages.allProducts == false
+          assign vc_page = true
+        endunless
+      elsif vc.collections.mode == 'selected'
+        if vc.collections.handles contains vc_collection.handle
+          assign vc_page = true
+        endif
+      else
+        assign vc_page = true
+      endif
+    when 'search'
+      unless vc.pages.search == false
+        assign vc_page = true
+      endunless
+    when 'index'
+      if vc.pages.home == true
+        assign vc_page = true
+      endif
+  endcase
+  assign vc_active = false
+  if vc_on and vc_page
+    assign vc_active = true
+  endif
+
+  assign vc_split = true
+  if vc.split.enabled == false
+    assign vc_split = false
+  endif
+  if vc_collection_settings.split == false
+    assign vc_split = false
+  elsif vc_collection_settings.split == true
+    assign vc_split = true
+  endif
+  assign vc_prehide = false
+  if vc_active and vc_split and request.design_mode == false
+    unless vc.advanced.preventFlash == false
+      assign vc_prehide = true
+    endunless
+  endif
+-%}
+
+{%- if vc_active -%}
+  {%- capture vc_money -%}{{ 123456 | money }}{%- endcapture -%}
+  {%- capture vc_money_code -%}{{ 123456 | money_with_currency }}{%- endcapture -%}
+  <script type="application/json" id="vc-config">
+    {
+      "template": {{ vc_type | json }},
+      "collection": {% if vc_collection %}{"handle": {{ vc_collection.handle | json }}, "id": {{ vc_collection.id | json }}}{% else %}null{% endif %},
+      "settings": {{ vc | json }},
+      "collectionSettings": {{ vc_collection_settings | json }},
+      "money": {"plain": {{ vc_money | strip_html | strip | json }}, "withCurrency": {{ vc_money_code | strip_html | strip | json }}},
+      "texts": {
+        "from": {{ 'texts.from' | t | json }},
+        "soldOut": {{ 'texts.sold_out' | t | json }},
+        "sale": {{ 'texts.sale' | t | json }},
+        "addToCart": {{ 'texts.add_to_cart' | t | json }},
+        "added": {{ 'texts.added' | t | json }},
+        "viewCart": {{ 'texts.view_cart' | t | json }},
+        "loadMore": {{ 'texts.load_more' | t | json }},
+        "loading": {{ 'texts.loading' | t | json }}
+      },
+      "designMode": {{ request.design_mode | json }}
+    }
+  </script>
+  {%- if vc_prehide -%}
+    <style id="vc-prehide">
+      html.vc-pending :is(#product-grid, #ProductGridContainer, [id^="product-grid"], [id^="CollectionProductGrid"], .product-grid, .collection-grid, .collection__products, .collection-products, .product-list, .products-grid, .productgrid--items, [data-product-grid], .grid--uniform, .main-collection-grid, results-list{% if vc.advanced.gridSelector != blank %}, {{ vc.advanced.gridSelector }}{% endif %}) {
+        opacity: 0 !important;
+        transition: none !important;
+      }
+    </style>
+    <script>
+      document.documentElement.classList.add('vc-pending');
+      setTimeout(function () { document.documentElement.classList.remove('vc-pending'); }, 2500);
+    </script>
+  {%- endif -%}
+  {%- if vc.advanced.customCss != blank -%}
+    <style id="vc-custom-css">{{ vc.advanced.customCss }}</style>
+  {%- endif -%}
+  <script src="{{ 'vc-cards.js' | asset_url }}" defer></script>
+  {%- if vc.advanced.customJs != blank -%}
+    <script>
+      document.addEventListener('vc:ready', function () {
+        {{ vc.advanced.customJs }}
+      }, { once: true });
+    </script>
+  {%- endif -%}
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "Variant Cards",
+  "target": "head",
+  "settings": [
+    {
+      "type": "paragraph",
+      "content": "Shows each variant as its own card on collection and search pages. Choose collections, titles, prices and swatches in the Variant Cards app. This embed must stay on."
+    }
+  ]
+}
+{% endschema %}

@@ -1,0 +1,17 @@
+{
+  "texts": {
+    "from": "{price}-tól",
+    "sold_out": "Elfogyott",
+    "sale": "Akció",
+    "add_to_cart": "Kosárba",
+    "choose_options": "Opciók kiválasztása",
+    "added": "Kosárba téve",
+    "view_cart": "Kosár megtekintése",
+    "load_more": "Továbbiak betöltése",
+    "loading": "Betöltés…",
+    "view_all": "Összes megtekintése",
+    "previous": "Előző",
+    "next": "Következő",
+    "example_product": "Mintatermék"
+  }
+}

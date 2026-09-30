@@ -1,0 +1,17 @@
+{
+  "texts": {
+    "from": "Ab {price}",
+    "sold_out": "Ausverkauft",
+    "sale": "Sale",
+    "add_to_cart": "In den Warenkorb",
+    "choose_options": "Optionen wählen",
+    "added": "Zum Warenkorb hinzugefügt",
+    "view_cart": "Warenkorb ansehen",
+    "load_more": "Mehr laden",
+    "loading": "Wird geladen…",
+    "view_all": "Alle ansehen",
+    "previous": "Zurück",
+    "next": "Weiter",
+    "example_product": "Beispielprodukt"
+  }
+}

@@ -5,13 +5,13 @@ import { gzipSync } from "node:zlib";
 import { readFileSync } from "node:fs";
 
 const watch = process.argv.includes("--watch");
-const outdir = "extensions/variant-images/assets";
+const outdir = "extensions/variant-cards/assets";
 
 const options = {
   entryPoints: {
-    "pvi-product": "src/storefront/product-entry.ts",
-    "pvi-swatches": "src/storefront/swatches-entry.ts",
-    "pvi-cards": "src/storefront/cards-entry.ts",
+    "vc-cards": "src/storefront/entry.ts",
+    "vc-sections": "src/storefront/sections-entry.ts",
+    "vc-promo": "src/storefront/promo-entry.ts",
   },
   outdir,
   bundle: true,

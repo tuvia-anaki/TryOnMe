@@ -1,0 +1,17 @@
+{
+  "texts": {
+    "from": "{price} başlayan fiyatlarla",
+    "sold_out": "Tükendi",
+    "sale": "İndirim",
+    "add_to_cart": "Sepete ekle",
+    "choose_options": "Seçenekleri belirle",
+    "added": "Sepete eklendi",
+    "view_cart": "Sepeti görüntüle",
+    "load_more": "Daha fazla yükle",
+    "loading": "Yükleniyor…",
+    "view_all": "Tümünü görüntüle",
+    "previous": "Önceki",
+    "next": "Sonraki",
+    "example_product": "Örnek ürün"
+  }
+}

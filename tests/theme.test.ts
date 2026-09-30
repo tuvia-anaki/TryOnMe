@@ -1,30 +1,36 @@
 import { describe, expect, it } from "vitest";
-import { conflictsFromProductTemplate, embedStateFromSettings, themeEditorUrl } from "../src/admin/api/theme";
+import { testedThemeFor } from "../src/shared/themes";
+import { embedStateFromSettings, sectionsInFile } from "../src/admin/api/theme";
 
-const EMBED = "shopify://apps/prism/blocks/variant-images-embed/0123-abcd";
+const APP = "tryon-69";
+const block = (app: string, handle: string, extra: Record<string, unknown> = {}) => ({ type: `shopify://apps/${app}/blocks/${handle}/9827b57a-d8a6-43e3-9ddb-91a8f657d85a`, settings: {}, ...extra });
 
 describe("theme status", () => {
   it("reads the app embed state from settings_data.json", () => {
-    expect(embedStateFromSettings(JSON.stringify({ current: { blocks: { a: { type: EMBED, disabled: false } } } }))).toBe("enabled");
-    expect(embedStateFromSettings(JSON.stringify({ current: { blocks: { a: { type: EMBED, disabled: true } } } }))).toBe("disabled");
-    expect(embedStateFromSettings(JSON.stringify({ current: { blocks: { a: { type: "shopify://apps/x/blocks/y/1" } } } }))).toBe("missing");
-    expect(embedStateFromSettings("/* banner */" + JSON.stringify({ current: { blocks: { a: { type: EMBED } } } }))).toBe("enabled");
-    expect(embedStateFromSettings(JSON.stringify({ current: "Default" }))).toBe("missing");
-    expect(embedStateFromSettings("{broken")).toBe("missing");
+    const data = (blocks: Record<string, unknown>) => `/* banner */ ${JSON.stringify({ current: { blocks } })}`;
+    expect(embedStateFromSettings(data({ a: block(APP, "app-embed") }), APP)).toBe("enabled");
+    expect(embedStateFromSettings(data({ a: block(APP, "app-embed", { disabled: true }) }), APP)).toBe("disabled");
+    expect(embedStateFromSettings(data({}), APP)).toBe("missing");
+    // Another app's embed with the same block name doesn't count.
+    expect(embedStateFromSettings(data({ a: block("other-app", "app-embed") }), APP)).toBe("missing");
+    expect(embedStateFromSettings("not json", APP)).toBe("missing");
   });
 
-  it("detects themes that already filter media by variant", () => {
-    const dawn = JSON.stringify({ sections: { main: { type: "main-product", settings: { hide_variants: true } } } });
-    expect(conflictsFromProductTemplate(dawn)).toEqual([{ id: "hide-variant-media", section: "main-product" }]);
-    const block = JSON.stringify({ sections: { main: { type: "product-information", blocks: { m: { settings: { enable_media_grouping: true } } } } } });
-    expect(conflictsFromProductTemplate(block)).toHaveLength(1);
-    const off = JSON.stringify({ sections: { main: { type: "main-product", settings: { hide_variants: false, gallery_layout: "stacked" } } } });
-    expect(conflictsFromProductTemplate(off)).toEqual([]);
+  it("finds the app's sections in templates", () => {
+    const template = JSON.stringify({
+      sections: {
+        hero: { type: "image-banner", blocks: {} },
+        apps: { type: "apps", blocks: { x: block(APP, "best-sellers"), y: block(APP, "promo-card", { disabled: true }), z: block("other-app", "hand-picked") } },
+        off: { type: "apps", disabled: true, blocks: { w: block(APP, "featured-collection") } },
+      },
+    });
+    expect(sectionsInFile(template, APP)).toEqual(["best-sellers"]);
   });
 
-  it("builds the theme editor deep link that activates the embed", () => {
-    expect(themeEditorUrl("demo.myshopify.com", "abc123")).toBe(
-      "https://demo.myshopify.com/admin/themes/current/editor?context=apps&template=product&activateAppId=abc123%2Fvariant-images-embed",
-    );
+  it("recognizes tested themes, also renamed copies", () => {
+    expect(testedThemeFor("Savor")).toBe("Savor");
+    expect(testedThemeFor("Copy of Savor - Sept")).toBe("Savor");
+    expect(testedThemeFor("Be Yours 8.5")).toBe("Be Yours");
+    expect(testedThemeFor("Dawnlight custom")).toBeNull();
   });
 });
