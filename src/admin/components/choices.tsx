@@ -40,7 +40,7 @@ function optionChoices(options: StoreOption[] | undefined, current: string | nul
   return list;
 }
 
-export function SplitPicker(props: { enabled: boolean; by: SplitBy; onChange: (split: { enabled: boolean; by: SplitBy }) => void }) {
+export function SplitPicker(props: { enabled: boolean; by: SplitBy; labelHidden?: boolean; onChange: (split: { enabled: boolean; by: SplitBy }) => void }) {
   const options = useAsync(() => loadOptionNames(), []);
   const kind = splitKind(props.enabled, props.by);
   const current = splitOptionName(props.by);
@@ -58,6 +58,7 @@ export function SplitPicker(props: { enabled: boolean; by: SplitBy; onChange: (s
     <>
       <ChoiceCards<SplitKind>
         label={t("What gets its own card")}
+        labelHidden={props.labelHidden}
         value={kind}
         onChange={choose}
         choices={[
@@ -74,16 +75,18 @@ export function SplitPicker(props: { enabled: boolean; by: SplitBy; onChange: (s
         ]}
       />
       {kind === "option" && (
-        <Dropdown
-          label={t("Which option")}
-          value={current ?? ""}
-          options={available.map((o) => ({
-            value: o.name,
-            label: o.name,
-            description: o.products ? [tn(o.products, "{count} product", "{count} products"), o.example && t("e.g. {example}", { example: o.example })].filter(Boolean).join(" · ") : undefined,
-          }))}
-          onChange={(name) => props.onChange({ enabled: true, by: `option:${name}` })}
-        />
+        <div class="vc-narrow">
+          <Dropdown
+            label={t("Which option")}
+            value={current ?? ""}
+            options={available.map((o) => ({
+              value: o.name,
+              label: o.name,
+              description: o.products ? [tn(o.products, "{count} product", "{count} products"), o.example && t("e.g. {example}", { example: o.example })].filter(Boolean).join(" · ") : undefined,
+            }))}
+            onChange={(name) => props.onChange({ enabled: true, by: `option:${name}` })}
+          />
+        </div>
       )}
     </>
   );

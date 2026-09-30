@@ -1,11 +1,12 @@
 import { APP_NAME, SUPPORT_EMAIL } from "../../shared/brand";
+import { Button, PageHeader, Panel } from "../components/ui";
 import { msg, t } from "../i18n";
 import { navigate } from "../router";
 
 const CHECKLIST = [
   msg("The app is on in your theme and the theme is saved (Home says “Live”)."),
   msg("The collection shows variant cards (Collections → the collection → “Show variant cards on this collection's page”)."),
-  msg("The products have a color option. Products without one stay as one card, unless you pick another option (Settings → What gets its own card)."),
+  msg("The products have a color option. Products without one stay as one card, unless you pick another option (Home → What gets its own card)."),
   msg("You're looking at the published theme, or at the theme you picked on Home (use its preview)."),
   msg("Reload the collection page once: product data is cached for 10 minutes while you browse."),
 ];
@@ -47,53 +48,54 @@ const FAQ: [string, string][] = [
 
 export function Help() {
   return (
-    <s-page heading={t("Help")} inlineSize="base">
-      <s-stack direction="block" gap="base">
-        <s-section heading={t("How it works")}>
-          <s-paragraph>
+    <s-page inlineSize="base">
+      <PageHeader title={t("Help")} back={{ label: t("Home"), to: "/" }} />
+      <div class="vc-stack">
+        <Panel title={t("How it works")}>
+          <p class="vc-text">
             {t("{app} takes each product card in your collection and search pages and shows one card per color (or per any option you choose). Each card keeps your theme's design and shows that variant's image, title, price and link.", { app: APP_NAME })}
-          </s-paragraph>
-        </s-section>
+          </p>
+        </Panel>
 
-        <s-section heading={t("Variant cards don't show?")}>
-          <s-ordered-list>
+        <Panel title={t("Variant cards don't show?")}>
+          <ol class="vc-steps">
             {CHECKLIST.map((item) => (
-              <s-list-item key={item}>{t(item)}</s-list-item>
+              <li key={item}>{t(item)}</li>
             ))}
-          </s-ordered-list>
-          <s-paragraph color="subdued">
-            {t("Still not working? Your theme may build its grid in an unusual way. Settings → Advanced → “Product card selector” lets you point the app at your cards.")}
-          </s-paragraph>
-          <s-stack direction="inline" gap="small-200">
-            <s-button onClick={() => void navigate("/")}>{t("Go to Home")}</s-button>
-            <s-button variant="tertiary" onClick={() => void navigate("/settings")}>
-              {t("Settings")}
-            </s-button>
-          </s-stack>
-        </s-section>
+          </ol>
+          <p class="vc-muted">
+            {t("Still not working? Your theme may build its grid in an unusual way. More settings → Advanced → “Product card selector” lets you point the app at your cards.")}
+          </p>
+          <div class="vc-actions">
+            <Button onClick={() => void navigate("/")}>{t("Go to Home")}</Button>
+            <Button variant="plain" onClick={() => void navigate("/settings")}>
+              {t("More settings")}
+            </Button>
+          </div>
+        </Panel>
 
-        <s-section heading={t("Questions")}>
-          <s-stack direction="block" gap="base">
+        <Panel title={t("Questions")}>
+          <div class="vc-faq">
             {FAQ.map(([question, answer]) => (
-              <s-stack key={question} direction="block" gap="small-200">
-                <s-heading>{t(question)}</s-heading>
-                <s-paragraph>{t(answer)}</s-paragraph>
-              </s-stack>
+              <details key={question} class="vc-faq__item">
+                <summary class="vc-faq__question">{t(question)}</summary>
+                <p class="vc-text">{t(answer)}</p>
+              </details>
             ))}
-          </s-stack>
-        </s-section>
+          </div>
+        </Panel>
 
-        <s-section heading={t("Contact")}>
+        <Panel title={t("Contact")}>
           {SUPPORT_EMAIL ? (
-            <s-paragraph>
+            <p class="vc-text">
               {t("Email us at {email}. Include your store address and a link to the collection page.", { email: SUPPORT_EMAIL })}{" "}
               <s-link href={`mailto:${SUPPORT_EMAIL}`}>{t("Write an email")}</s-link>
-            </s-paragraph>
+            </p>
           ) : (
-            <s-paragraph>{t("{app} is maintained by a small team. Reach us through the app's listing page in the Shopify App Store.", { app: APP_NAME })}</s-paragraph>
+            <p class="vc-text">{t("{app} is maintained by a small team. Reach us through the app's listing page in the Shopify App Store.", { app: APP_NAME })}</p>
           )}
-        </s-section>
-      </s-stack>
+        </Panel>
+      </div>
     </s-page>
   );
 }

@@ -16,7 +16,7 @@ Kalles draws its collection grid with JavaScript after the page loads; the scrip
 
 ## If cards aren't split
 
-Settings → Advanced:
+More settings → Advanced:
 
 - **Product card selector** — a CSS selector matching one product card (e.g. `.product-card`).
 - **Product grid selector** — limits the app to one grid (and is used by the anti-flash style).

@@ -29,13 +29,13 @@ Show each variant — usually each color — as its own product card on collecti
 
 ## Test instructions for reviewers
 
-1. Open the app: the setup guide on Home shows the steps.
-2. Step 1 opens the theme editor with the "Variant Cards" app embed turned on — press Save.
+1. Open the app: Home says whether the app is on in the theme.
+2. "Turn on in theme editor" opens the theme editor with the "Variant Cards" app embed turned on — press Save.
 3. Open any collection with products that have a color option: each color shows as its own card.
-4. Settings → change what gets its own card, the card title or the price format; Collections → open a collection to reorder or hide cards.
+4. On Home, change what gets its own card, the card title or where cards show, then press Save; open a collection under "Your collections" to reorder or hide its cards; More settings has sold-out, price and advanced options.
 
 ## Screenshots (ideas)
 
 1. A collection page before/after: one card per product vs. one card per color.
-2. Settings: "What gets its own card" picture choices.
+2. Home: "What gets its own card" picture choices.
 3. A collection's card order editor (drag and drop).

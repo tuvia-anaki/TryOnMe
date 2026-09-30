@@ -1,6 +1,7 @@
 import { useEffect, useState } from "preact/hooks";
 import { loadCollectionsByHandle, type ChosenCollection } from "../api/collections";
 import { formatNumber, t, tn } from "../i18n";
+import { Button } from "./ui";
 
 /**
  * The collections chosen in the settings: a list with pictures, and Shopify's
@@ -54,8 +55,8 @@ export function CollectionPicker(props: { handles: string[]; onChange: (handles:
   if (!props.handles.length) {
     return (
       <div class="vc-picked vc-picked--empty">
-        <s-text color="subdued">{t("No collections chosen yet.")}</s-text>
-        <s-button onClick={() => void pick()}>{t("Choose collections")}</s-button>
+        <span class="vc-muted">{t("No collections chosen yet.")}</span>
+        <Button onClick={() => void pick()}>{t("Choose collections")}</Button>
       </div>
     );
   }
@@ -87,7 +88,7 @@ export function CollectionPicker(props: { handles: string[]; onChange: (handles:
         })}
       </ul>
       <div class="vc-picked__footer">
-        <s-button onClick={() => void pick()}>{t("Add or remove collections")}</s-button>
+        <Button onClick={() => void pick()}>{t("Add or remove collections")}</Button>
       </div>
     </div>
   );

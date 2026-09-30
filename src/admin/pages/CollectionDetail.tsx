@@ -16,7 +16,8 @@ import { loadAppContext, saveSettings } from "../api/settings";
 import { splitSummary, titleChoices } from "../components/choices";
 import { ErrorBanner, Loading, openExternal } from "../components/common";
 import { Disclosure } from "../components/Disclosure";
-import { Card, Check, Select, Text } from "../components/fields";
+import { Select, Text } from "../components/fields";
+import { Button, PageHeader, Panel, ToggleRow } from "../components/ui";
 import { formatNumber, t, tn } from "../i18n";
 import { toast, useAsync, useSaveBar } from "../lib/hooks";
 import { navigate } from "../router";
@@ -166,16 +167,19 @@ export function CollectionDetail({ id }: { id: number }) {
     );
   }, [products.data, JSON.stringify(effective), draft.order]);
 
+  const back = { label: t("Collections"), to: "/collections" };
   if (collection.loading && !collection.data) {
     return (
-      <s-page heading={t("Loading collection…")}>
+      <s-page inlineSize="base">
+        <PageHeader title={t("Loading collection…")} back={back} />
         <Loading />
       </s-page>
     );
   }
   if (collection.error || context.error) {
     return (
-      <s-page heading={t("Collection")}>
+      <s-page inlineSize="base">
+        <PageHeader title={t("Collection")} back={back} />
         <ErrorBanner error={(collection.error ?? context.error)!} onRetry={collection.error ? collection.reload : context.reload} />
       </s-page>
     );
@@ -183,11 +187,14 @@ export function CollectionDetail({ id }: { id: number }) {
   const row = collection.data;
   if (!row || !shop) {
     return (
-      <s-page heading={t("Collection not found")}>
-        <s-section>
-          <s-paragraph>{t("This collection doesn't exist anymore.")}</s-paragraph>
-          <s-button onClick={() => void navigate("/collections")}>{t("Back to collections")}</s-button>
-        </s-section>
+      <s-page inlineSize="base">
+        <PageHeader title={t("Collection not found")} back={back} />
+        <Panel>
+          <p class="vc-text">{t("This collection doesn't exist anymore.")}</p>
+          <div class="vc-actions">
+            <Button onClick={() => void navigate("/collections")}>{t("Back to collections")}</Button>
+          </div>
+        </Panel>
       </s-page>
     );
   }
@@ -243,26 +250,71 @@ export function CollectionDetail({ id }: { id: number }) {
   };
 
   return (
-    <s-page heading={row.title} inlineSize="base">
-      <s-link slot="breadcrumb-actions" onClick={() => void navigate("/collections")}>
-        {t("Collections")}
-      </s-link>
-      <s-button slot="secondary-actions" onClick={() => openExternal(`${storeUrl}/collections/${row.handle}`)}>
-        {t("View in store")}
-      </s-button>
+    <s-page inlineSize="base">
+      <PageHeader
+        title={row.title}
+        subtitle={tn(row.productsCount, "{count} product", "{count} products", { count: formatNumber(row.productsCount) })}
+        back={back}
+        actions={<Button onClick={() => openExternal(`${storeUrl}/collections/${row.handle}`)}>{t("View in store")}</Button>}
+      />
 
-      <s-stack direction="block" gap="base">
-        <Card heading={t("Variant cards in this collection")}>
-          <Check
-            label={t("Show variant cards on this collection's page")}
-            details={shop.collections.mode === "selected" ? t("Adds it to (or removes it from) the collections you chose in Settings.") : undefined}
+      <div class="vc-stack">
+        {!shop.enabled && <s-banner tone="warning">{t("Variant Cards is paused for the whole store (see Home).")}</s-banner>}
+        <Panel>
+          <ToggleRow
+            title={t("Show variant cards on this collection's page")}
+            description={shop.collections.mode === "selected" ? t("Adds it to (or removes it from) the collections you chose on Home.") : undefined}
             checked={on}
             onChange={setOn}
           />
-          {!shop.enabled && <s-banner tone="warning">{t("Variant Cards is paused for the whole store (see Home).")}</s-banner>}
-        </Card>
+        </Panel>
 
-        <Card heading={t("Card order")} description={t("Drag cards to change the order shoppers see. Hidden cards don't show in this collection.")}>
+        <Disclosure title={t("Different settings for this collection")} summary={overrides ? t("Some settings are changed") : t("Same as your settings")} defaultOpen={overrides}>
+          <div class="vc-columns">
+            <Select<string> showDescription label={t("What gets its own card")} value={splitValue} options={splitOptions} onChange={setSplit} />
+            <Select<string>
+              showDescription
+              label={t("Card title")}
+              value={titleValue}
+              options={titleOptions}
+              disabled={!(effective?.split ?? true)}
+              onChange={(v) => setDraft({ ...draft, title: v === INHERIT ? null : v === CUSTOM ? "{product} · {value}" : v })}
+            />
+            <Select<string>
+              showDescription
+              label={t("Price")}
+              value={draft.price ?? INHERIT}
+              options={[same(priceChoices().find(([v]) => v === shop.price.format)![1]), ...priceChoices()]}
+              onChange={(v) => setDraft({ ...draft, price: v === INHERIT ? null : (v as PriceFormat) })}
+            />
+            <Select<string>
+              showDescription
+              label={t("Card order")}
+              value={draft.mix === null ? INHERIT : draft.mix ? "mix" : "together"}
+              options={[same(orderChoices().find(([v]) => v === (shop.order.mix ? "mix" : "together"))![1]), ...orderChoices()]}
+              onChange={(v) => setDraft({ ...draft, mix: v === INHERIT ? null : v === "mix" })}
+            />
+            <Select<string>
+              showDescription
+              label={t("Sold-out cards")}
+              value={showHide(draft.hideSoldOut)}
+              options={[same(shop.hide.soldOut ? t("Hide") : t("Show")), ["show", t("Show")], ["hide", t("Hide")]]}
+              onChange={(v) => setDraft({ ...draft, hideSoldOut: fromShowHide(v) })}
+            />
+            <Select<string>
+              showDescription
+              label={t("Cards without their own photo")}
+              value={showHide(draft.hideNoImage)}
+              options={[same(shop.hide.noImage ? t("Hide") : t("Show")), ["show", t("Show")], ["hide", t("Hide")]]}
+              onChange={(v) => setDraft({ ...draft, hideNoImage: fromShowHide(v) })}
+            />
+          </div>
+          {draft.title !== null && !(TITLE_PRESETS as readonly string[]).includes(draft.title) && (
+            <Text label={t("Custom title")} value={draft.title} onChange={(title) => setDraft({ ...draft, title: title || null })} />
+          )}
+        </Disclosure>
+
+        <Panel title={t("Card order")} description={t("Drag cards to change the order shoppers see. Hidden cards don't show in this collection.")}>
           {products.error ? (
             <ErrorBanner error={products.error} onRetry={products.reload} />
           ) : products.loading ? (
@@ -274,25 +326,25 @@ export function CollectionDetail({ id }: { id: number }) {
             <s-text color="subdued">{t("This collection has no products.")}</s-text>
           ) : (
             <>
-              <s-grid gridTemplateColumns="1fr auto" gap="base" alignItems="center">
-                <s-text color="subdued">
+              <div class="vc-order-bar">
+                <span class="vc-muted">
                   {tn(cards.length, "{count} card", "{count} cards")}
                   {hidden.size ? ` · ${tn(hidden.size, "{count} hidden", "{count} hidden")}` : ""}
                   {products.data?.truncated ? ` · ${t("first {count} products", { count: formatNumber(products.data.products.length) })}` : ""}
-                </s-text>
-                <s-stack direction="inline" gap="small-200">
+                </span>
+                <span class="vc-actions">
                   {draft.order.length > 0 && (
-                    <s-button variant="tertiary" onClick={() => setDraft({ ...draft, order: [] })}>
+                    <Button variant="plain" onClick={() => setDraft({ ...draft, order: [] })}>
                       {t("Reset order")}
-                    </s-button>
+                    </Button>
                   )}
                   {draft.hidden.length > 0 && (
-                    <s-button variant="tertiary" onClick={() => setDraft({ ...draft, hidden: [] })}>
+                    <Button variant="plain" onClick={() => setDraft({ ...draft, hidden: [] })}>
                       {t("Show all")}
-                    </s-button>
+                    </Button>
                   )}
-                </s-stack>
-              </s-grid>
+                </span>
+              </div>
               <OrderList
                 cards={cards}
                 hidden={hidden}
@@ -304,59 +356,9 @@ export function CollectionDetail({ id }: { id: number }) {
               />
             </>
           )}
-        </Card>
+        </Panel>
 
-        <Disclosure title={t("Different settings for this collection")} summary={overrides ? t("Some settings are changed") : t("Same as your settings")} defaultOpen={overrides}>
-          <s-section>
-            <s-query-container>
-              <s-grid gridTemplateColumns="@container (inline-size <= 560px) 1fr, 1fr 1fr" gap="base">
-                <Select<string> showDescription label={t("What gets its own card")} value={splitValue} options={splitOptions} onChange={setSplit} />
-                <Select<string>
-                  showDescription
-                  label={t("Card title")}
-                  value={titleValue}
-                  options={titleOptions}
-                  disabled={!(effective?.split ?? true)}
-                  onChange={(v) => setDraft({ ...draft, title: v === INHERIT ? null : v === CUSTOM ? "{product} · {value}" : v })}
-                />
-                <Select<string>
-                  showDescription
-                  label={t("Price")}
-                  value={draft.price ?? INHERIT}
-                  options={[same(priceChoices().find(([v]) => v === shop.price.format)![1]), ...priceChoices()]}
-                  onChange={(v) => setDraft({ ...draft, price: v === INHERIT ? null : (v as PriceFormat) })}
-                />
-                <Select<string>
-                  showDescription
-                  label={t("Card order")}
-                  value={draft.mix === null ? INHERIT : draft.mix ? "mix" : "together"}
-                  options={[same(orderChoices().find(([v]) => v === (shop.order.mix ? "mix" : "together"))![1]), ...orderChoices()]}
-                  onChange={(v) => setDraft({ ...draft, mix: v === INHERIT ? null : v === "mix" })}
-                />
-                <Select<string>
-                  showDescription
-                  label={t("Sold-out cards")}
-                  value={showHide(draft.hideSoldOut)}
-                  options={[same(shop.hide.soldOut ? t("Hide") : t("Show")), ["show", t("Show")], ["hide", t("Hide")]]}
-                  onChange={(v) => setDraft({ ...draft, hideSoldOut: fromShowHide(v) })}
-                />
-                <Select<string>
-                  showDescription
-                  label={t("Cards without their own photo")}
-                  value={showHide(draft.hideNoImage)}
-                  options={[same(shop.hide.noImage ? t("Hide") : t("Show")), ["show", t("Show")], ["hide", t("Hide")]]}
-                  onChange={(v) => setDraft({ ...draft, hideNoImage: fromShowHide(v) })}
-                />
-              </s-grid>
-            </s-query-container>
-            {draft.title !== null && !(TITLE_PRESETS as readonly string[]).includes(draft.title) && (
-              <s-box paddingBlockStart="base">
-                <Text label={t("Custom title")} value={draft.title} onChange={(title) => setDraft({ ...draft, title: title || null })} />
-              </s-box>
-            )}
-          </s-section>
-        </Disclosure>
-      </s-stack>
+      </div>
     </s-page>
   );
 }

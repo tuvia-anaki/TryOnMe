@@ -50,7 +50,8 @@ export function useSettingsDraft(saveBarId: string | null = null) {
     setSaving(true);
     try {
       const clean = await saveSettings(context.data, change(saved));
-      setDraft(clean);
+      // Unsaved edits on the page stay (with the same change), and keep the save bar up.
+      setDraft((current) => (!current || JSON.stringify(current) === JSON.stringify(saved) ? clean : change(current)));
       setSaved(clean);
       if (message) toast(message);
       return true;
@@ -76,5 +77,5 @@ export function useSettingsDraft(saveBarId: string | null = null) {
 
   useSaveBar(saveBarId, dirty, saving, { onSave: () => void save(), onDiscard: discard }, { save: t("Save"), discard: t("Discard") });
 
-  return { context, draft, dirty, saving, save, update, discard, patch, setDraft };
+  return { context, draft, saved, dirty, saving, save, update, discard, patch, setDraft };
 }

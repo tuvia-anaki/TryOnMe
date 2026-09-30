@@ -6,8 +6,8 @@ A **100% free** Shopify app that shows every product variant as its own product 
 - **Where it runs** — all collections or the ones you choose, the all-products page, search results and (optionally) home page product grids. Works with the theme's filters, sorting and its own infinite scroll.
 - **Hide and sort** — hide sold-out variants or variants without their own image, mix variants of different products, sold-out cards last.
 - **Per-collection settings** — turn cards on or off for one collection, **drag-and-drop the order** of its variant cards, hide individual cards, or override any setting.
-- **Home** — a 3-step setup guide, then one status line per theme ("Live on Dawn"), a pause switch, and a warning when another variant app is also on in the theme.
-- **Simple admin** — picture choices instead of jargon, the app's own dropdowns, Shopify's collection picker, advanced settings folded away, and Shopify's save bar only on form pages (Settings, a collection) and only while there are unsaved changes.
+- **Home is the control center** — a status card with the one action that matters ("Turn on in theme editor", "Pause", "Turn back on"), the main settings right there (what gets its own card, the title, where cards show), your collections with their on/off state, and "More settings" for everything else. A warning shows when another variant app is also on in the theme.
+- **Simple admin** — big titles, switches and clickable rows, picture choices instead of jargon, the app's own dropdowns, Shopify's collection picker, advanced settings folded away, and Shopify's save bar only on form pages (Home, More settings, a collection) and only while there are unsaved changes.
 - **Admin in 19 languages** (follows the Shopify admin, with an in-app language picker); storefront texts ("Sold out", "From $10") in 30 languages.
 
 The app deliberately does one thing: earlier versions also had sections, swatches, add-to-cart buttons and "Load more"; they were removed to keep variant cards fully reliable.
