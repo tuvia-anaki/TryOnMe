@@ -1,17 +1,6 @@
 {
   "texts": {
     "from": "Desde {price}",
-    "sold_out": "Agotado",
-    "sale": "Oferta",
-    "add_to_cart": "Añadir al carrito",
-    "choose_options": "Elegir opciones",
-    "added": "Añadido al carrito",
-    "view_cart": "Ver carrito",
-    "load_more": "Cargar más",
-    "loading": "Cargando…",
-    "view_all": "Ver todo",
-    "previous": "Anterior",
-    "next": "Siguiente",
-    "example_product": "Producto de ejemplo"
+    "sold_out": "Agotado"
   }
 }

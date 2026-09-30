@@ -5,9 +5,7 @@ import { CollectionDetail } from "./pages/CollectionDetail";
 import { Collections } from "./pages/Collections";
 import { Dashboard } from "./pages/Dashboard";
 import { Help } from "./pages/Help";
-import { Sections } from "./pages/Sections";
 import { Settings } from "./pages/Settings";
-import { Swatches } from "./pages/Swatches";
 import { matchRoute, navigate, usePath } from "./router";
 
 class ErrorBoundary extends Component<{ children: ComponentChildren }, { error: Error | null }> {
@@ -33,8 +31,8 @@ class ErrorBoundary extends Component<{ children: ComponentChildren }, { error: 
 export function App() {
   // mock.html (local development) is the home page.
   const path = usePath().replace(/\/mock\.html$/, "").replace(/\/+$/, "") || "/";
-  // Paths of the apps this one replaced (bookmarks, open admin tabs).
-  const legacy = ["/app", "/products", "/bulk"].some((p) => path === p || path.startsWith(`${p}/`)) || path.startsWith("/auth/");
+  // Paths of earlier versions and of the apps this one replaced (bookmarks, open admin tabs).
+  const legacy = ["/app", "/products", "/bulk", "/swatches", "/sections"].some((p) => path === p || path.startsWith(`${p}/`)) || path.startsWith("/auth/");
   useEffect(() => {
     if (legacy) void navigate("/", { replace: true });
   }, [legacy]);
@@ -44,8 +42,6 @@ export function App() {
   else if (path === "/settings") page = <Settings />;
   else if (path === "/collections") page = <Collections />;
   else if ((params = matchRoute("/collections/:id", path))) page = <CollectionDetail key={params.id} id={Number(params.id)} />;
-  else if (path === "/swatches") page = <Swatches />;
-  else if (path === "/sections") page = <Sections />;
   else if (path === "/help") page = <Help />;
   else {
     page = (

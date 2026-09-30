@@ -10,8 +10,6 @@ const outdir = "extensions/variant-cards/assets";
 const options = {
   entryPoints: {
     "vc-cards": "src/storefront/entry.ts",
-    "vc-sections": "src/storefront/sections-entry.ts",
-    "vc-promo": "src/storefront/promo-entry.ts",
   },
   outdir,
   bundle: true,

@@ -44,9 +44,7 @@ export function readContext(doc: Document = document): PageContext | null {
   const money = [raw.money?.withCurrency, raw.money?.plain]
     .map((sample) => (sample ? learnMoneyPattern(decode(sample), SAMPLE_CENTS) : null))
     .filter((p): p is MoneyPattern => !!p);
-  // Merchant texts win over the store-language defaults printed by Liquid.
-  const texts = { ...raw.texts } as Texts;
-  for (const [key, value] of Object.entries(settings.texts)) if (value) texts[key as keyof Texts] = value;
+  const texts: Texts = { from: raw.texts?.from || "From {price}", soldOut: raw.texts?.soldOut || "Sold out" };
   const r = (window as any).Shopify?.routes?.root;
   return {
     template: raw.template ?? "",

@@ -9,9 +9,9 @@ import { fromAjaxProduct, type AjaxProduct, type VcProduct } from "../shared/spl
  */
 
 export const UI_ATTR = "data-vc-ui";
-/** Never product grids: navigation, cart drawers, search popups, the app's own sections. */
+/** Never product grids: navigation, cart drawers, search popups, the app's own additions. */
 const EXCLUDE =
-  "header, footer, nav, [role='navigation'], .header, .footer, cart-drawer, .cart-drawer, #CartDrawer, [id*='cart-drawer'], [id*='CartDrawer'], predictive-search, .predictive-search, [data-vc-section], [data-vc-ui], dialog, [role='dialog']";
+  "header, footer, nav, [role='navigation'], .header, .footer, cart-drawer, .cart-drawer, #CartDrawer, [id*='cart-drawer'], [id*='CartDrawer'], predictive-search, .predictive-search, [data-vc-ui], dialog, [role='dialog']";
 
 export interface ThemeCard {
   el: Element;

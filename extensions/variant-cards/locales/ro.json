@@ -1,17 +1,6 @@
 {
   "texts": {
     "from": "De la {price}",
-    "sold_out": "Stoc epuizat",
-    "sale": "Reducere",
-    "add_to_cart": "Adaugă în coș",
-    "choose_options": "Alege opțiunile",
-    "added": "Adăugat în coș",
-    "view_cart": "Vezi coșul",
-    "load_more": "Încarcă mai multe",
-    "loading": "Se încarcă…",
-    "view_all": "Vezi tot",
-    "previous": "Anterior",
-    "next": "Următor",
-    "example_product": "Produs exemplu"
+    "sold_out": "Stoc epuizat"
   }
 }

@@ -256,9 +256,8 @@ export function Dashboard() {
 
         <s-section heading={t("Customize")} padding="none">
           <div class="vc-link-rows">
+            <LinkRow icon="settings" title={t("Settings")} description={t("Pick what gets its own card and how it's named.")} to="/settings" />
             <LinkRow icon="collection" title={t("Collections")} description={t("Change the order of cards or hide some, per collection.")} to="/collections" />
-            <LinkRow icon="color" title={t("Swatches")} description={settings?.swatches.enabled ? t("On: color dots under each card.") : t("Add color dots under each card.")} to="/swatches" />
-            <LinkRow icon="layout-section" title={t("Sections")} description={t("Best sellers, related products and more, with variant cards.")} to="/sections" />
           </div>
         </s-section>
       </s-stack>

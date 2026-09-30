@@ -5,13 +5,12 @@ A **100% free** Shopify app that shows every product variant as its own product 
 - **Variant cards** — one card per color (the color option is found automatically, in any language), per variant, or per value of any other option (Size, Material, Scent…). Cards reuse the theme's own card design, so they look native. Custom titles (`{product} - {value}`, `{vendor}`, `{option1}`…), price formats (theme / "From $X" / "$X – $Y"), sale prices and sold-out badges per variant.
 - **Where it runs** — all collections or the ones you choose, the all-products page, search results and (optionally) home page product grids. Works with the theme's filters, sorting and its own infinite scroll.
 - **Hide and sort** — hide sold-out variants or variants without their own image, mix variants of different products, sold-out cards last.
-- **Per-collection settings** — override anything for one collection, **drag-and-drop the order** of its variant cards, hide individual cards.
-- **Swatches on cards** — color dots (named colors in many languages, Shopify's own swatch colors, or tiny variant photos) or buttons, up to three option rows; hover previews on regular cards.
-- **Add to cart on cards**, **Load more / infinite scroll**, "back to top".
-- **Sections** for the theme editor — Featured collection, Best sellers, Hand-picked products, Related products (Shopify recommendations) and a **Promo card** placed inside the collection grid — all with variant cards, grid or carousel, and the theme's fonts and colors.
+- **Per-collection settings** — turn cards on or off for one collection, **drag-and-drop the order** of its variant cards, hide individual cards, or override any setting.
 - **Home** — a 3-step setup guide, then one status line per theme ("Live on Dawn"), a pause switch, and a warning when another variant app is also on in the theme.
-- **Simple admin** — picture choices instead of jargon, the app's own dropdowns, Shopify's collection picker, rarely used settings behind "More settings", and Shopify's save bar only on form pages (Settings, Swatches, a collection) and only while there are unsaved changes.
-- **Admin in 19 languages** (follows the Shopify admin, with an in-app language picker); storefront texts in 30 languages, all editable.
+- **Simple admin** — picture choices instead of jargon, the app's own dropdowns, Shopify's collection picker, advanced settings folded away, and Shopify's save bar only on form pages (Settings, a collection) and only while there are unsaved changes.
+- **Admin in 19 languages** (follows the Shopify admin, with an in-app language picker); storefront texts ("Sold out", "From $10") in 30 languages.
+
+The app deliberately does one thing: earlier versions also had sections, swatches, add-to-cart buttons and "Load more"; they were removed to keep variant cards fully reliable.
 
 ## Why it can be free forever
 
@@ -22,27 +21,24 @@ Nothing runs on a server when shoppers browse:
 | Settings | App-data metafield (`app.metafields.variant_cards.settings`) | Free (Shopify) |
 | Per-collection settings & card order | App-owned collection metafield (`$app:variant_cards.settings`) | Free (Shopify) |
 | Storefront script | Theme app extension (Shopify CDN); product data from Shopify's `/products/<handle>.js` | Free (Shopify) |
-| Sections | Liquid app blocks rendered by Shopify | Free (Shopify) |
 | Admin UI | Static files; Admin API calls go straight from the browser to Shopify (App Bridge **Direct API access**) | Any static host |
 | Privacy webhooks | One small handler that verifies the HMAC | No per-use cost |
 
-No database, no stored tokens, no per-shop or per-shopper server work. (Click analytics would need a server that grows with traffic, so they're intentionally left out; the dashboard shows free catalog stats instead.)
+No database, no stored tokens, no per-shop or per-shopper server work. (Click analytics would need a server that grows with traffic, so they're intentionally left out.)
 
 ## Project layout
 
 ```
 extensions/variant-cards/    Theme app extension
   blocks/vc-app-embed.liquid   settings + page context for the script, anti-flash style
-  blocks/vc-*.liquid           sections: featured-collection, best-sellers, hand-picked, related-products, promo-card
-  snippets/vc-card, vc-grid    the sections' card and grid (split into color cards in Liquid)
-  assets/                      built scripts (vc-cards.js, vc-sections.js, vc-promo.js) + vc-sections.css
+  assets/vc-cards.js           the built storefront script
   locales/                     storefront texts (30 languages)
-src/shared/                  Pure logic: settings, splitting products into cards, money formats, colors
+src/shared/                  Pure logic: settings, splitting products into cards, money formats
 src/storefront/              Storefront scripts → extensions/variant-cards/assets
   cards.ts                     finds product grids/cards in any theme, loads product data
   patch.ts                     turns a theme card into a variant card (link, image, title, price, forms, badges)
   engine.ts                    splits grids, arranges cards, re-runs when the theme redraws the grid
-  swatches.ts, cart.ts, paging.ts, promo.ts, entry.ts, sections-entry.ts, promo-entry.ts
+  context.ts, entry.ts         reads the embed's settings, starts the engine
 src/admin/                   Embedded admin (Preact + Polaris web components + App Bridge)
 src/server/node.ts           Node server (Render): serves dist/, security headers, webhooks, /healthz
 src/worker/                  Webhook verification + the same server as a Cloudflare Worker (alternative host)
@@ -93,7 +89,6 @@ npm run check   # typecheck + tests + production build
 ```js
 document.addEventListener("vc:ready", (e) => {});     // e.detail.active: the app splits cards on this page
 document.addEventListener("vc:render", (e) => {});    // e.detail: { grid, cards: [{ element, key, variantId }] }
-document.addEventListener("vc:cart-add", (e) => {});  // e.detail.item: the cart line Shopify returned
 window.VariantCards.refresh();                         // split cards added by other scripts
 ```
 

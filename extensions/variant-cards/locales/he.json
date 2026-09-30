@@ -1,17 +1,6 @@
 {
   "texts": {
     "from": "החל מ-{price}",
-    "sold_out": "אזל מהמלאי",
-    "sale": "מבצע",
-    "add_to_cart": "הוספה לסל",
-    "choose_options": "בחירת אפשרויות",
-    "added": "נוסף לסל",
-    "view_cart": "לצפייה בסל",
-    "load_more": "טעינת עוד",
-    "loading": "טוען…",
-    "view_all": "הצגת הכל",
-    "previous": "הקודם",
-    "next": "הבא",
-    "example_product": "מוצר לדוגמה"
+    "sold_out": "אזל מהמלאי"
   }
 }

@@ -1,9 +1,9 @@
-import { BLOCK_HANDLES, EMBED_HANDLE, SECTIONS, type SectionHandle } from "../../shared/constants";
+import { EMBED_HANDLE } from "../../shared/constants";
 import { gql } from "./graphql";
 
 /**
- * The store's themes, and for one theme: is the app embed on, and where are
- * the app's sections placed. Read from the theme's JSON files (read_themes).
+ * The store's themes, and for one theme: is the app embed on, and is another
+ * variant app on too. Read from the theme's settings_data.json (read_themes).
  */
 
 export type ThemeRole = "MAIN" | "UNPUBLISHED" | "DEVELOPMENT" | "DEMO" | "ARCHIVED" | "LOCKED";
@@ -20,8 +20,6 @@ export type EmbedState = "enabled" | "disabled" | "missing";
 export interface ThemeStatus {
   theme: ThemeInfo;
   embed: EmbedState | "unknown";
-  /** Section handle → templates it's placed on ("index", "product"…). */
-  sections: Record<SectionHandle, string[]>;
   /** Other variant or swatch apps switched on in the theme (their app handles). */
   otherVariantApps: string[];
 }
@@ -38,7 +36,7 @@ query ThemeFiles($id: ID!) {
     name
     role
     themeStoreId
-    files(filenames: ["config/settings_data.json", "templates/*.json", "sections/*.json"], first: 250) {
+    files(filenames: ["config/settings_data.json"], first: 1) {
       nodes { filename body { ... on OnlineStoreThemeFileBodyText { content } } }
     }
   }
@@ -86,8 +84,8 @@ export function parseThemeJson(content: string): any {
 
 /**
  * Block types look like "shopify://apps/<app>/blocks/<block>/<extension id>". <app> is a
- * name Shopify picks (it follows the app's name, not its handle), so the app's own blocks
- * are recognized by their "vc-" block names instead.
+ * name Shopify picks (it follows the app's name, not its handle), so the app's embed is
+ * recognized by its "vc-app-embed" block name instead.
  */
 function parseBlockType(type: unknown): { app: string; block: string } | null {
   const m = typeof type === "string" ? /^shopify:\/\/apps\/([^/]+)\/blocks\/([^/]+)\//.exec(type) : null;
@@ -115,8 +113,8 @@ export function otherVariantAppsFromSettings(settingsData: string): string[] {
   const blocks = parseThemeJson(settingsData)?.current?.blocks;
   if (!blocks || typeof blocks !== "object") return [];
   const all = Object.values(blocks as Record<string, any>).map((block) => ({ block, type: parseBlockType(block?.type) }));
-  // The name Shopify files this app's own blocks under.
-  const own = new Set(all.flatMap(({ type }) => (type && BLOCK_HANDLES.includes(type.block) ? [type.app] : [])));
+  // The name Shopify files this app's own embed under.
+  const own = new Set(all.flatMap(({ type }) => (type?.block === EMBED_HANDLE ? [type.app] : [])));
   const found = new Set<string>();
   for (const { block, type } of all) {
     if (!type || own.has(type.app) || block.disabled === true) continue;
@@ -132,43 +130,18 @@ export function appNameFromHandle(handle: string): string {
   return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
-/** Which of the app's sections a template (or section group) file contains. */
-export function sectionsInFile(content: string): SectionHandle[] {
-  const parsed = parseThemeJson(content);
-  const found = new Set<SectionHandle>();
-  const byBlock = new Map(SECTIONS.map((s) => [s.block, s.handle]));
-  for (const section of Object.values((parsed?.sections ?? {}) as Record<string, any>)) {
-    if (section?.disabled === true) continue;
-    for (const block of Object.values((section?.blocks ?? {}) as Record<string, any>)) {
-      if (block?.disabled === true) continue;
-      const handle = byBlock.get(parseBlockType(block?.type)?.block ?? "");
-      if (handle) found.add(handle);
-    }
-  }
-  return [...found];
-}
-
 export async function loadThemeStatus(themeId: string): Promise<ThemeStatus> {
   const data = await gql<{
     theme: (ThemeInfo & { files: { nodes: { filename: string; body: { content?: string } | null }[] } | null }) | null;
   }>(THEME_FILES_QUERY, { id: themeId });
   const theme = data.theme;
   if (!theme) throw new Error("Theme not found");
-  const sections = Object.fromEntries(SECTIONS.map((s) => [s.handle, [] as string[]])) as Record<SectionHandle, string[]>;
-  let embed: ThemeStatus["embed"] = "unknown";
-  let otherVariantApps: string[] = [];
-  for (const file of theme.files?.nodes ?? []) {
-    const content = file.body?.content;
-    if (!content) continue;
-    if (file.filename === "config/settings_data.json") {
-      embed = embedStateFromSettings(content);
-      otherVariantApps = otherVariantAppsFromSettings(content);
-      continue;
-    }
-    const where = file.filename.replace(/^(templates|sections)\//, "").replace(/\.json$/, "");
-    for (const handle of sectionsInFile(content)) sections[handle].push(where);
-  }
-  return { theme: { id: theme.id, name: theme.name, role: theme.role, themeStoreId: theme.themeStoreId }, embed, sections, otherVariantApps };
+  const settingsData = theme.files?.nodes.find((file) => file.filename === "config/settings_data.json")?.body?.content;
+  return {
+    theme: { id: theme.id, name: theme.name, role: theme.role, themeStoreId: theme.themeStoreId },
+    embed: settingsData ? embedStateFromSettings(settingsData) : "unknown",
+    otherVariantApps: settingsData ? otherVariantAppsFromSettings(settingsData) : [],
+  };
 }
 
 const numericId = (gid: string) => gid.split("/").pop() ?? gid;
@@ -180,16 +153,6 @@ function editorUrl(shopDomain: string, themeId: string, params: Record<string, s
 /** Opens the theme editor with the app embed switched on (the merchant presses Save). */
 export function enableEmbedUrl(shopDomain: string, themeId: string, apiKey: string): string {
   return editorUrl(shopDomain, themeId, { context: "apps", template: "collection", activateAppId: `${apiKey}/${EMBED_HANDLE}` });
-}
-
-/** Opens the theme editor with one of the app's sections added to a template. */
-export function addSectionUrl(shopDomain: string, themeId: string, apiKey: string, handle: SectionHandle, template: string): string {
-  const block = SECTIONS.find((s) => s.handle === handle)?.block ?? handle;
-  return editorUrl(shopDomain, themeId, { template, addAppBlockId: `${apiKey}/${block}`, target: "newAppsSection" });
-}
-
-export function themeEditorUrl(shopDomain: string, themeId: string, template = "collection"): string {
-  return editorUrl(shopDomain, themeId, { template });
 }
 
 /** Opens the theme editor's App embeds list. */

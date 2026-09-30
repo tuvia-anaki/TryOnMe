@@ -1,17 +1,6 @@
 {
   "texts": {
     "from": "{price}부터",
-    "sold_out": "품절",
-    "sale": "세일",
-    "add_to_cart": "장바구니에 담기",
-    "choose_options": "옵션 선택",
-    "added": "장바구니에 담았습니다",
-    "view_cart": "장바구니 보기",
-    "load_more": "더 보기",
-    "loading": "불러오는 중…",
-    "view_all": "모두 보기",
-    "previous": "이전",
-    "next": "다음",
-    "example_product": "예시 상품"
+    "sold_out": "품절"
   }
 }

@@ -79,13 +79,7 @@
       "money": {"plain": {{ vc_money | strip_html | strip | json }}, "withCurrency": {{ vc_money_code | strip_html | strip | json }}},
       "texts": {
         "from": {{ 'texts.from' | t | json }},
-        "soldOut": {{ 'texts.sold_out' | t | json }},
-        "sale": {{ 'texts.sale' | t | json }},
-        "addToCart": {{ 'texts.add_to_cart' | t | json }},
-        "added": {{ 'texts.added' | t | json }},
-        "viewCart": {{ 'texts.view_cart' | t | json }},
-        "loadMore": {{ 'texts.load_more' | t | json }},
-        "loading": {{ 'texts.loading' | t | json }}
+        "soldOut": {{ 'texts.sold_out' | t | json }}
       },
       "designMode": {{ request.design_mode | json }}
     }
@@ -106,13 +100,6 @@
     <style id="vc-custom-css">{{ vc.advanced.customCss }}</style>
   {%- endif -%}
   <script src="{{ 'vc-cards.js' | asset_url }}" defer></script>
-  {%- if vc.advanced.customJs != blank -%}
-    <script>
-      document.addEventListener('vc:ready', function () {
-        {{ vc.advanced.customJs }}
-      }, { once: true });
-    </script>
-  {%- endif -%}
 {%- endif -%}
 
 {% schema %}
@@ -122,7 +109,7 @@
   "settings": [
     {
       "type": "paragraph",
-      "content": "Shows each variant as its own card on collection and search pages. Choose collections, titles, prices and swatches in the Variant Cards app. This embed must stay on."
+      "content": "Shows each variant as its own card on collection and search pages. Choose collections, titles and prices in the Variant Cards app. This embed must stay on."
     }
   ]
 }

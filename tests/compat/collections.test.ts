@@ -96,7 +96,7 @@ run("collection pages of real themes", () => {
         settings,
         effective: effectiveSettings(settings, null),
         money: money ? [money] : [],
-        texts: { from: "From {price}", soldOut: "Sold out", sale: "Sale", addToCart: "Add to cart", added: "Added", viewCart: "View cart", loadMore: "Load more", loading: "Loading" },
+        texts: { from: "From {price}", soldOut: "Sold out" },
         designMode: false,
         root: "/",
       };

@@ -1,17 +1,6 @@
 {
   "texts": {
     "from": "Vanaf {price}",
-    "sold_out": "Uitverkocht",
-    "sale": "Sale",
-    "add_to_cart": "In winkelwagen",
-    "choose_options": "Opties kiezen",
-    "added": "Toegevoegd aan winkelwagen",
-    "view_cart": "Winkelwagen bekijken",
-    "load_more": "Meer laden",
-    "loading": "Laden…",
-    "view_all": "Alles bekijken",
-    "previous": "Vorige",
-    "next": "Volgende",
-    "example_product": "Voorbeeldproduct"
+    "sold_out": "Uitverkocht"
   }
 }

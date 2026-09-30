@@ -41,7 +41,7 @@ const FAQ: [string, string][] = [
   ],
   [
     msg("What happens when I uninstall?"),
-    msg("The app embed and sections stop showing and your store goes back to the theme's normal cards. Shopify deletes the app's settings automatically."),
+    msg("Your store goes back to the theme's normal cards right away, and Shopify deletes the app's settings automatically."),
   ],
 ];
 
@@ -53,9 +53,6 @@ export function Help() {
           <s-paragraph>
             {t("{app} takes each product card in your collection and search pages and shows one card per color (or per any option you choose). Each card keeps your theme's design and shows that variant's image, title, price and link.", { app: APP_NAME })}
           </s-paragraph>
-          <s-paragraph color="subdued">
-            {t("Use Settings for the whole store, Collections for one collection (including a manual card order), Swatches for the color dots under cards, and Sections to add best sellers, featured collections and more.")}
-          </s-paragraph>
         </s-section>
 
         <s-section heading={t("Variant cards don't show?")}>
@@ -65,7 +62,7 @@ export function Help() {
             ))}
           </s-ordered-list>
           <s-paragraph color="subdued">
-            {t("Still not working? Your theme may build its grid in an unusual way. Settings → More settings → “Product card selector” lets you point the app at your cards.")}
+            {t("Still not working? Your theme may build its grid in an unusual way. Settings → Advanced → “Product card selector” lets you point the app at your cards.")}
           </s-paragraph>
           <s-stack direction="inline" gap="small-200">
             <s-button onClick={() => void navigate("/")}>{t("Go to Home")}</s-button>

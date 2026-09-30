@@ -1,17 +1,6 @@
 {
   "texts": {
     "from": "{price} 起",
-    "sold_out": "售完",
-    "sale": "特價",
-    "add_to_cart": "加入購物車",
-    "choose_options": "選擇選項",
-    "added": "已加入購物車",
-    "view_cart": "查看購物車",
-    "load_more": "載入更多",
-    "loading": "載入中…",
-    "view_all": "查看全部",
-    "previous": "上一個",
-    "next": "下一個",
-    "example_product": "範例商品"
+    "sold_out": "售完"
   }
 }

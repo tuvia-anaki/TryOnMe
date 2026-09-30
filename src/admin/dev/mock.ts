@@ -184,17 +184,7 @@ function themeFiles(themeId: number) {
     g: { type: "shopify://apps/prism-variant-images/blocks/variant-images-embed/0002", disabled: false, settings: {} },
   };
   const settingsData = { current: { blocks: themeId === 1 ? { ...(localStorage.getItem("vc-mock-embed") ? { e: embed } : {}), ...others } : {} } };
-  const index = {
-    sections: {
-      hero: { type: "image-banner", blocks: {} },
-      apps: themeId === 1 ? { type: "apps", blocks: { b: { type: `shopify://apps/${APP_SEGMENT}/blocks/vc-best-sellers/0000`, settings: {} } } } : { type: "apps", blocks: {} },
-    },
-  };
-  return [
-    { filename: "config/settings_data.json", body: { content: JSON.stringify(settingsData) } },
-    { filename: "templates/index.json", body: { content: JSON.stringify(index) } },
-    { filename: "templates/product.json", body: { content: JSON.stringify({ sections: {} }) } },
-  ];
+  return [{ filename: "config/settings_data.json", body: { content: JSON.stringify(settingsData) } }];
 }
 
 function handle(query: string, variables: Json): Json {
@@ -269,18 +259,6 @@ function handle(query: string, variables: Json): Json {
       }
       return out;
     }
-    case "ColorValues":
-      return {
-        products: {
-          pageInfo: { hasNextPage: false, endCursor: null },
-          nodes: store.products.map((p) => ({
-            options: p.options.map((name, i) => ({
-              name,
-              optionValues: [...new Set(p.variants.map((v) => v.options[i]))].map((value) => ({ name: value, swatch: p.swatches[value] ? { color: p.swatches[value], image: null } : null })),
-            })),
-          })),
-        },
-      };
     default:
       throw new Error(`Mock: unknown operation ${op}`);
   }

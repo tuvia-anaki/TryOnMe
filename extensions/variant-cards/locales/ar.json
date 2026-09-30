@@ -1,17 +1,6 @@
 {
   "texts": {
     "from": "ابتداءً من {price}",
-    "sold_out": "نفدت الكمية",
-    "sale": "تخفيض",
-    "add_to_cart": "أضف إلى السلة",
-    "choose_options": "اختر الخيارات",
-    "added": "تمت الإضافة إلى السلة",
-    "view_cart": "عرض السلة",
-    "load_more": "تحميل المزيد",
-    "loading": "جارٍ التحميل…",
-    "view_all": "عرض الكل",
-    "previous": "السابق",
-    "next": "التالي",
-    "example_product": "منتج تجريبي"
+    "sold_out": "نفدت الكمية"
   }
 }

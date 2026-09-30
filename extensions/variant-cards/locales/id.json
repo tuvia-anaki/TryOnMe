@@ -1,17 +1,6 @@
 {
   "texts": {
     "from": "Mulai {price}",
-    "sold_out": "Habis",
-    "sale": "Diskon",
-    "add_to_cart": "Tambahkan ke keranjang",
-    "choose_options": "Pilih opsi",
-    "added": "Ditambahkan ke keranjang",
-    "view_cart": "Lihat keranjang",
-    "load_more": "Muat lainnya",
-    "loading": "Memuat…",
-    "view_all": "Lihat semua",
-    "previous": "Sebelumnya",
-    "next": "Berikutnya",
-    "example_product": "Contoh produk"
+    "sold_out": "Habis"
   }
 }

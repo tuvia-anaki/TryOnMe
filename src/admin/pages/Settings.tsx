@@ -1,23 +1,12 @@
-import type { PagingMode, PriceFormat, Texts } from "../../shared/settings";
+import type { PriceFormat } from "../../shared/settings";
 import { ChoiceCards } from "../components/ChoiceCards";
 import { CollectionPicker } from "../components/CollectionPicker";
 import { SplitPicker, TitlePicker } from "../components/choices";
 import { ErrorBanner, Loading } from "../components/common";
 import { Disclosure } from "../components/Disclosure";
 import { Area, Card, Check, Select, Text } from "../components/fields";
-import { msg, t } from "../i18n";
+import { t } from "../i18n";
 import { useSettingsDraft } from "../lib/draft";
-
-const TEXT_FIELDS: [keyof Texts, string, string][] = [
-  ["from", msg("Price when variants cost different amounts"), "From {price}"],
-  ["soldOut", msg("Sold out"), "Sold out"],
-  ["sale", msg("Sale badge"), "Sale"],
-  ["addToCart", msg("Add to cart button"), "Add to cart"],
-  ["added", msg("After adding to cart"), "Added to cart"],
-  ["viewCart", msg("View cart link"), "View cart"],
-  ["loadMore", msg("Load more button"), "Load more"],
-  ["loading", msg("While loading"), "Loading…"],
-];
 
 /** Price choices: [value, label, example]. */
 export function priceChoices(): [PriceFormat, string, string][] {
@@ -115,12 +104,6 @@ export function Settings() {
           </s-query-container>
           <Check label={t("“Sold out” badge")} checked={s.card.soldOutBadge} onChange={(soldOutBadge) => patch("card", { soldOutBadge })} />
           <Check
-            label={t("Add to cart button")}
-            details={t("Cards with sizes to pick show “Choose options” instead.")}
-            checked={s.card.addToCart}
-            onChange={(addToCart) => patch("card", { addToCart })}
-          />
-          <Check
             label={t("Hide the theme's color swatches")}
             details={t("They would list every color on a card that shows one.")}
             checked={s.card.hideThemeSwatches}
@@ -134,65 +117,32 @@ export function Settings() {
           />
         </Card>
 
-        <Disclosure title={t("More settings")} summary={t("Loading more products, texts and advanced options")}>
-          <s-stack direction="block" gap="base">
-            <Card heading={t("Loading more products")}>
-              <s-box maxInlineSize="360px">
-                <Select<PagingMode>
-                  label={t("On collection and search pages")}
-                  value={s.paging.mode}
-                  options={[
-                    ["theme", t("Your theme's pages")],
-                    ["load-more", t("“Load more” button")],
-                    ["infinite", t("Infinite scroll")],
-                  ]}
-                  onChange={(mode) => patch("paging", { mode })}
-                />
-              </s-box>
-              <Check label={t("“Back to top” button")} checked={s.paging.scrollTop} onChange={(scrollTop) => patch("paging", { scrollTop })} />
-            </Card>
-
-            <Card heading={t("Storefront texts")} description={t("Leave a field empty to use the default in your store's language.")}>
-              <s-query-container>
-                <s-grid gridTemplateColumns="@container (inline-size <= 520px) 1fr, 1fr 1fr" gap="base">
-                  {TEXT_FIELDS.map(([key, label, placeholder]) => (
-                    <Text key={key} label={t(label)} value={s.texts[key]} placeholder={placeholder} maxLength={80} onChange={(value) => patch("texts", { [key]: value })} />
-                  ))}
-                </s-grid>
-              </s-query-container>
-            </Card>
-
-            <Card heading={t("Advanced")}>
-              <Check
-                label={t("Hide the product grid until variant cards are ready")}
-                details={t("Prevents a flash of the original cards on slower themes (never longer than 2.5 seconds).")}
-                checked={s.advanced.preventFlash}
-                onChange={(preventFlash) => patch("advanced", { preventFlash })}
-              />
-              <Text
-                label={t("Product grid selector")}
-                value={s.advanced.gridSelector}
-                placeholder="#product-grid"
-                details={t("Only if the app doesn't find your theme's product grid on its own.")}
-                onChange={(gridSelector) => patch("advanced", { gridSelector })}
-              />
-              <Text
-                label={t("Product card selector")}
-                value={s.advanced.cardSelector}
-                placeholder=".product-card"
-                details={t("Only if cards aren't detected: a CSS selector matching one product card.")}
-                onChange={(cardSelector) => patch("advanced", { cardSelector })}
-              />
-              <Area label={t("Custom CSS")} value={s.advanced.customCss} placeholder=".vc-badge { background: #000; color: #fff; }" onChange={(customCss) => patch("advanced", { customCss })} />
-              <Area
-                label={t("Custom JavaScript")}
-                value={s.advanced.customJs}
-                placeholder="document.addEventListener('vc:render', (event) => { … });"
-                details={t("Runs on your storefront after the app starts. Events: vc:ready, vc:render, vc:cart-add.")}
-                onChange={(customJs) => patch("advanced", { customJs })}
-              />
-            </Card>
-          </s-stack>
+        <Disclosure title={t("Advanced")}>
+          <s-section>
+            <s-stack direction="block" gap="base">
+            <Check
+              label={t("Hide the product grid until variant cards are ready")}
+              details={t("Prevents a flash of the original cards on slower themes (never longer than 2.5 seconds).")}
+              checked={s.advanced.preventFlash}
+              onChange={(preventFlash) => patch("advanced", { preventFlash })}
+            />
+            <Text
+              label={t("Product grid selector")}
+              value={s.advanced.gridSelector}
+              placeholder="#product-grid"
+              details={t("Only if the app doesn't find your theme's product grid on its own.")}
+              onChange={(gridSelector) => patch("advanced", { gridSelector })}
+            />
+            <Text
+              label={t("Product card selector")}
+              value={s.advanced.cardSelector}
+              placeholder=".product-card"
+              details={t("Only if cards aren't detected: a CSS selector matching one product card.")}
+              onChange={(cardSelector) => patch("advanced", { cardSelector })}
+            />
+            <Area label={t("Custom CSS")} value={s.advanced.customCss} placeholder=".vc-badge { background: #000; color: #fff; }" onChange={(customCss) => patch("advanced", { customCss })} />
+            </s-stack>
+          </s-section>
         </Disclosure>
       </s-stack>
     </s-page>

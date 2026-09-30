@@ -41,7 +41,7 @@ function context(): PageContext {
     settings,
     effective: effectiveSettings(settings, null),
     money: [learnMoneyPattern("$1,234.56", 123456)!],
-    texts: { from: "From {price}", soldOut: "Sold out", sale: "Sale", addToCart: "Add to cart", added: "Added", viewCart: "View cart", loadMore: "Load more", loading: "Loading" },
+    texts: { from: "From {price}", soldOut: "Sold out" },
     designMode: false,
     root: "/",
   };

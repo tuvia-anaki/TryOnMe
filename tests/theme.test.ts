@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { testedThemeFor } from "../src/shared/themes";
-import { appNameFromHandle, embedStateFromSettings, otherVariantAppsFromSettings, sectionsInFile } from "../src/admin/api/theme";
+import { appNameFromHandle, embedStateFromSettings, otherVariantAppsFromSettings } from "../src/admin/api/theme";
 
 // Shopify names the app part after the app (here its earlier name), not the app handle.
 const APP = "prism-variant-images";
@@ -35,17 +35,6 @@ describe("theme status", () => {
     expect(otherVariantAppsFromSettings("not json")).toEqual([]);
     expect(appNameFromHandle("variants-on-collection")).toBe("Variants on collection");
     expect(appNameFromHandle("tryon-69")).toBe("Tryon");
-  });
-
-  it("finds the app's sections in templates", () => {
-    const template = JSON.stringify({
-      sections: {
-        hero: { type: "image-banner", blocks: {} },
-        apps: { type: "apps", blocks: { x: block(APP, "vc-best-sellers"), y: block(APP, "vc-promo-card", { disabled: true }), z: block("other-app", "hand-picked") } },
-        off: { type: "apps", disabled: true, blocks: { w: block(APP, "vc-featured-collection") } },
-      },
-    });
-    expect(sectionsInFile(template)).toEqual(["best-sellers"]);
   });
 
   it("recognizes tested themes, also renamed copies", () => {

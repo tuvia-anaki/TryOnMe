@@ -465,46 +465,6 @@ body {
   background: #29845a;
 }
 
-/* ---------- Colors ---------- */
-.vc-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 2px 8px 2px 4px;
-  border-radius: 12px;
-  background: #f1f1f1;
-  font-size: 12px;
-  white-space: nowrap;
-}
-.vc-dot {
-  display: inline-block;
-  flex: none;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.18);
-  background-size: cover;
-}
-.vc-color-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-}
-.vc-color-table td {
-  padding: 6px 4px;
-  border-top: 1px solid var(--vc-border);
-  vertical-align: middle;
-}
-.vc-color-table input[type="color"] {
-  width: 44px;
-  height: 28px;
-  padding: 0;
-  border: 1px solid var(--vc-border-strong);
-  border-radius: 6px;
-  background: none;
-  cursor: pointer;
-}
-
 /* ---------- Card order ---------- */
 .vc-order {
   display: flex;
@@ -618,25 +578,4 @@ body {
     grid-column: 1 / -1;
     justify-content: flex-end;
   }
-}
-
-/* ---------- Swatch preview ---------- */
-.vc-preview-card {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  width: 100%;
-  max-width: 260px;
-}
-.vc-preview-card__image {
-  aspect-ratio: 4 / 5;
-  border-radius: 10px;
-  opacity: 0.85;
-}
-.vc-preview-card__title {
-  margin-top: 4px;
-  font-weight: 550;
-}
-.vc-preview-card__price {
-  color: var(--vc-text-subdued);
 }

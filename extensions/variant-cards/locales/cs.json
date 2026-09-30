@@ -1,17 +1,6 @@
 {
   "texts": {
     "from": "Od {price}",
-    "sold_out": "Vyprodáno",
-    "sale": "Sleva",
-    "add_to_cart": "Přidat do košíku",
-    "choose_options": "Vybrat možnosti",
-    "added": "Přidáno do košíku",
-    "view_cart": "Zobrazit košík",
-    "load_more": "Načíst další",
-    "loading": "Načítání…",
-    "view_all": "Zobrazit vše",
-    "previous": "Předchozí",
-    "next": "Další",
-    "example_product": "Ukázkový produkt"
+    "sold_out": "Vyprodáno"
   }
 }

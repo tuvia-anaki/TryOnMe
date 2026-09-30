@@ -1,17 +1,6 @@
 {
   "texts": {
     "from": "Från {price}",
-    "sold_out": "Slutsåld",
-    "sale": "Rea",
-    "add_to_cart": "Lägg i varukorgen",
-    "choose_options": "Välj alternativ",
-    "added": "Tillagd i varukorgen",
-    "view_cart": "Visa varukorg",
-    "load_more": "Ladda fler",
-    "loading": "Laddar…",
-    "view_all": "Visa alla",
-    "previous": "Föregående",
-    "next": "Nästa",
-    "example_product": "Exempelprodukt"
+    "sold_out": "Slutsåld"
   }
 }
