@@ -13,7 +13,7 @@ import { loadProduct, saveProductConfig, StaleConfigError, type LoadedProduct } 
 import { loadAppContext, markAssigned } from "../api/settings";
 import { loadThemeStatus, themeEditorUrl } from "../api/theme";
 import { ErrorBanner, Loading, openAdmin, openExternal } from "../components/common";
-import { GroupList, MediaGrid, VariantPreview } from "../components/EditorParts";
+import { GroupList, GroupPreview, MediaGrid } from "../components/EditorParts";
 import { t, tn } from "../i18n";
 import { inferGroupBy, regroup, setMain, SHARED_KEY, toggleMedia } from "../lib/editor";
 import { toast, useAsync, useSaveBar } from "../lib/hooks";
@@ -49,6 +49,7 @@ export function ProductEditor({ id }: { id: number }) {
   const [stale, setStale] = useState(false);
   const [notice, setNotice] = useState<{ text: string; undo: NormalizedConfig | null; tone: "info" | "success" | "warning" } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [showOptions, setShowOptions] = useState(false);
 
   const product = loaded.data?.product ?? null;
 
@@ -208,22 +209,54 @@ export function ProductEditor({ id }: { id: number }) {
   const groupByValue = groupBy.length > 1 ? "all" : String(groupBy[0] ?? "");
   const shopDomain = context.data?.shop.domain ?? window.shopify?.config?.shop ?? "";
   const apiKey = window.shopify?.config?.apiKey ?? "";
+  const editInShopify = () => openAdmin(`/products/${product.id}`);
 
-  return (
-    <s-page heading={product.title} inlineSize="large">
+  const titleBar = (
+    <>
       <s-link slot="breadcrumb-actions" onClick={() => void navigate("/products")}>
         {t("Products")}
       </s-link>
-      <s-button slot="primary-action" variant="primary" disabled={!dirty || saving || !settings} loading={saving} onClick={() => void save()}>
-        {t("Save")}
-      </s-button>
       {storeUrl && (
         <s-button slot="secondary-actions" onClick={() => openExternal(storeUrl)}>
           {t("View in store")}
         </s-button>
       )}
-      <s-button slot="secondary-actions" onClick={() => openAdmin(`/products/${product.id}`)}>
+      <s-button slot="secondary-actions" onClick={editInShopify}>
         {t("Edit product")}
+      </s-button>
+    </>
+  );
+
+  // One variant: nothing to assign, so no editor, just what to do next.
+  if (product.variants.length < 2) {
+    return (
+      <s-page heading={product.title} inlineSize="base">
+        {titleBar}
+        <s-section>
+          <s-empty-state heading={t("This product has a single variant")}>
+            <s-image slot="graphic" src="/illustrations/assign.svg" alt="" accessibilityRole="presentation" />
+            <s-text slot="subheading">
+              {t("Variant images are for products with several variants (like colors). Add variants to this product in Shopify, then come back here to assign their images.")}
+            </s-text>
+            <s-button slot="primary-action" variant="primary" onClick={() => void navigate("/products")}>
+              {t("Back to products")}
+            </s-button>
+            <s-button slot="secondary-actions" onClick={editInShopify}>
+              {t("Edit product")}
+            </s-button>
+          </s-empty-state>
+        </s-section>
+      </s-page>
+    );
+  }
+
+  const previewVariant = selected === SHARED_KEY ? product.variants[0] : selectedCombo?.variants[0];
+
+  return (
+    <s-page heading={product.title} inlineSize="large">
+      {titleBar}
+      <s-button slot="primary-action" variant="primary" disabled={!dirty || saving || !settings} loading={saving} onClick={() => void save()}>
+        {t("Save")}
       </s-button>
 
       {stale && (
@@ -237,15 +270,10 @@ export function ProductEditor({ id }: { id: number }) {
           <s-button onClick={() => shopDomain && apiKey && openExternal(themeEditorUrl(shopDomain, apiKey))}>{t("Turn on in theme editor")}</s-button>
         </s-banner>
       )}
-      {product.variants.length < 2 && (
-        <s-banner tone="info" heading={t("This product has a single variant")}>
-          <s-paragraph>{t("Variant images are for products with several variants (like colors). There's nothing to assign here.")}</s-paragraph>
-        </s-banner>
-      )}
-      {product.media.length < 2 && product.variants.length > 1 && (
+      {product.media.length < 2 && (
         <s-banner tone="info" heading={t("Add more images first")}>
           <s-paragraph>{t("Upload the images for each variant to the product in Shopify, then come back to assign them.")}</s-paragraph>
-          <s-button onClick={() => openAdmin(`/products/${product.id}`)}>{t("Edit product")}</s-button>
+          <s-button onClick={editInShopify}>{t("Edit product")}</s-button>
         </s-banner>
       )}
       {notice && (
@@ -265,54 +293,80 @@ export function ProductEditor({ id }: { id: number }) {
       )}
 
       <s-section>
-        <s-grid gridTemplateColumns="minmax(0, 1fr) minmax(0, 1fr) auto" gap="base" alignItems="end">
-          <s-select label={t("Group images by")} value={groupByValue} onChange={(event) => changeGroupBy(event.currentTarget.value ?? "")}>
-            {product.options.map((option) => (
-              <s-option value={String(option.id)} key={option.id}>
-                {option.name}
-              </s-option>
-            ))}
-            {product.options.length > 1 && <s-option value="all">{t("Each variant separately")}</s-option>}
-          </s-select>
-          <s-select
-            label={t("Images not assigned to any variant")}
-            value={unassignedChoice}
-            onChange={(event) => {
-              const value = event.currentTarget.value as UnassignedChoice;
-              setConfig({ ...cloneConfig(config), hideUnassigned: value === "inherit" ? null : value === "hide" });
-            }}
-          >
-            <s-option value="inherit">{shopDefaultHide ? t("Shop default (hide)") : t("Shop default (show)")}</s-option>
-            <s-option value="show">{t("Show for every variant")}</s-option>
-            <s-option value="hide">{t("Hide")}</s-option>
-          </s-select>
-          <s-stack direction="inline" gap="small-200">
-            <s-button commandFor="pvi-auto-menu" icon="wand" disabled={!!busy} loading={!!busy}>
+        <s-grid gridTemplateColumns="@container (inline-size <= 560px) 1fr, 1fr auto" gap="base" alignItems="center">
+          <s-grid gap="small-200">
+            <s-heading>{t("Assign images")}</s-heading>
+            <s-paragraph color="subdued">
+              {t("Pick a variant on the left, then click the images that belong to it. The first image becomes its main image.")}
+            </s-paragraph>
+          </s-grid>
+          <s-stack direction="inline" gap="small-200" alignItems="center">
+            <s-button variant="primary" icon="wand" disabled={!!busy} loading={!!busy} onClick={() => void autoAssign("best")}>
               {t("Auto-assign")}
             </s-button>
-            <s-menu id="pvi-auto-menu" accessibilityLabel={t("Auto-assign methods")}>
-              <s-button onClick={() => void autoAssign("best")}>{t("Automatic (best match)")}</s-button>
-              <s-button onClick={() => void autoAssign("variant-images")}>{t("By variant image order")}</s-button>
-              <s-button onClick={() => void autoAssign("alt-text")}>{t("By alt text")}</s-button>
-              <s-button onClick={() => void autoAssign("filename")}>{t("By file name")}</s-button>
-              <s-button onClick={() => void autoAssign("smart")}>{t("By colors in the images (visual)")}</s-button>
-              <s-button
-                tone="critical"
-                onClick={() => {
-                  setNotice({ text: t("Cleared all assignments."), undo: cloneConfig(config), tone: "info" });
-                  setConfig({ ...emptyConfig(), hideUnassigned: config.hideUnassigned });
-                }}
-              >
-                {t("Clear all")}
-              </s-button>
-            </s-menu>
+            <s-button
+              variant="tertiary"
+              icon={showOptions ? "chevron-up" : "chevron-down"}
+              onClick={() => setShowOptions(!showOptions)}
+            >
+              {t("More options")}
+            </s-button>
           </s-stack>
         </s-grid>
         {busy && <s-text color="subdued">{busy}</s-text>}
+        {showOptions && (
+          <div class="pvi-options">
+            <s-box padding="base" background="subdued" borderRadius="base">
+              <s-grid gap="base">
+                <s-grid gridTemplateColumns="@container (inline-size <= 560px) 1fr, 1fr 1fr" gap="base">
+                  {product.options.length > 1 && (
+                    <s-select label={t("Group images by")} value={groupByValue} onChange={(event) => changeGroupBy(event.currentTarget.value ?? "")}>
+                      {product.options.map((option) => (
+                        <s-option value={String(option.id)} key={option.id}>
+                          {option.name}
+                        </s-option>
+                      ))}
+                      <s-option value="all">{t("Each variant separately")}</s-option>
+                    </s-select>
+                  )}
+                  <s-select
+                    label={t("Images not assigned to any variant")}
+                    value={unassignedChoice}
+                    onChange={(event) => {
+                      const value = event.currentTarget.value as UnassignedChoice;
+                      setConfig({ ...cloneConfig(config), hideUnassigned: value === "inherit" ? null : value === "hide" });
+                    }}
+                  >
+                    <s-option value="inherit">{shopDefaultHide ? t("Shop default (hide)") : t("Shop default (show)")}</s-option>
+                    <s-option value="show">{t("Show for every variant")}</s-option>
+                    <s-option value="hide">{t("Hide")}</s-option>
+                  </s-select>
+                </s-grid>
+                <s-stack direction="inline" gap="small-200" alignItems="center">
+                  <s-text color="subdued">{t("Auto-assign methods")}</s-text>
+                  <s-button disabled={!!busy} onClick={() => void autoAssign("variant-images")}>{t("By variant image order")}</s-button>
+                  <s-button disabled={!!busy} onClick={() => void autoAssign("alt-text")}>{t("By alt text")}</s-button>
+                  <s-button disabled={!!busy} onClick={() => void autoAssign("filename")}>{t("By file name")}</s-button>
+                  <s-button disabled={!!busy} onClick={() => void autoAssign("smart")}>{t("By colors in the images (visual)")}</s-button>
+                  <s-button
+                    variant="tertiary"
+                    tone="critical"
+                    onClick={() => {
+                      setNotice({ text: t("Cleared all assignments."), undo: cloneConfig(config), tone: "info" });
+                      setConfig({ ...emptyConfig(), hideUnassigned: config.hideUnassigned });
+                    }}
+                  >
+                    {t("Clear all")}
+                  </s-button>
+                </s-stack>
+              </s-grid>
+            </s-box>
+          </div>
+        )}
       </s-section>
 
       <div class="pvi-editor">
-        <s-section heading={t("Groups")}>
+        <s-section heading={product.options.filter((o) => groupBy.includes(o.id)).map((o) => o.name).join(" / ") || t("Variants")}>
           <GroupList
             product={product}
             combos={combos}
@@ -325,26 +379,22 @@ export function ProductEditor({ id }: { id: number }) {
             onDropMedia={(key, mediaId) => setConfig(toggleMedia(config, product, key, valueIdsOf(key), mediaId, true))}
           />
         </s-section>
-        <s-section heading={t("Images for {group}", { group: selectedLabel })}>
-          <MediaGrid
-            product={product}
-            config={config}
-            selected={selected}
-            selectedLabel={selectedLabel}
-            groupLabels={labels}
-            onToggle={onToggle}
-            onSetMain={(mediaId) => setConfig(setMain(config, selected, valueIdsOf(selected), mediaId))}
-          />
-        </s-section>
+        <div class="pvi-editor__main">
+          <s-section heading={t("Images for {group}", { group: selectedLabel })}>
+            <MediaGrid
+              product={product}
+              config={config}
+              selected={selected}
+              groupLabels={labels}
+              onToggle={onToggle}
+              onSetMain={(mediaId) => setConfig(setMain(config, selected, valueIdsOf(selected), mediaId))}
+            />
+          </s-section>
+          <s-section heading={t("What shoppers see for {group}", { group: selected === SHARED_KEY ? product.variants[0]?.title ?? "" : selectedLabel })}>
+            <GroupPreview product={product} config={config} hideUnassigned={config.hideUnassigned ?? shopDefaultHide} variant={previewVariant} />
+          </s-section>
+        </div>
       </div>
-
-      <s-section heading={t("What shoppers will see")}>
-        <VariantPreview
-          product={product}
-          config={config}
-          hideUnassigned={config.hideUnassigned ?? shopDefaultHide}
-        />
-      </s-section>
     </s-page>
   );
 }

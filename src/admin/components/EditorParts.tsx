@@ -111,11 +111,13 @@ export function GroupList(props: {
 
 type Filter = "all" | "unassigned" | "group";
 
+/** Filter tabs only help when a product has lots of images. */
+const MANY_IMAGES = 12;
+
 export function MediaGrid(props: {
   product: ProductModel;
   config: NormalizedConfig;
   selected: string;
-  selectedLabel: string;
   groupLabels: Map<string, string>;
   onToggle: (mediaId: number, range: boolean) => void;
   onSetMain: (mediaId: number) => void;
@@ -128,7 +130,9 @@ export function MediaGrid(props: {
   for (const group of props.config.groups) for (const id of group.media) membership.set(id, [...(membership.get(id) ?? []), group.key]);
   for (const id of props.config.shared) membership.set(id, [...(membership.get(id) ?? []), SHARED_KEY]);
 
+  const many = props.product.media.length > MANY_IMAGES;
   const media = props.product.media.filter((m) => {
+    if (!many) return true;
     if (filter === "unassigned") return !membership.has(m.id);
     if (filter === "group") return inGroup.has(m.id);
     return true;
@@ -138,28 +142,23 @@ export function MediaGrid(props: {
 
   return (
     <div>
-      <div class="pvi-toolbar">
-        <s-text color="subdued">
-          {props.selected === SHARED_KEY
-            ? t("Click images to show them for every variant.")
-            : t("Click images to show them for “{group}”. Shift-click selects a range. Drag an image onto a group to add it there.", {
-                group: props.selectedLabel,
-              })}
-        </s-text>
-        <div class="pvi-segmented" role="group" aria-label={t("Show")}>
-          {(
-            [
-              ["all", t("All")],
-              ["unassigned", t("Unassigned")],
-              ["group", t("Selected")],
-            ] as [Filter, string][]
-          ).map(([value, label]) => (
-            <button type="button" aria-pressed={filter === value} onClick={() => setFilter(value)}>
-              {label}
-            </button>
-          ))}
+      {many && (
+        <div class="pvi-toolbar">
+          <div class="pvi-segmented" role="group" aria-label={t("Show")}>
+            {(
+              [
+                ["all", t("All")],
+                ["unassigned", t("Unassigned")],
+                ["group", t("Selected")],
+              ] as [Filter, string][]
+            ).map(([value, label]) => (
+              <button type="button" aria-pressed={filter === value} onClick={() => setFilter(value)}>
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
       {!media.length ? (
         <div class="pvi-empty">{filter === "unassigned" ? t("Every image is assigned.") : t("No images here yet.")}</div>
       ) : (
@@ -202,27 +201,28 @@ export function MediaGrid(props: {
                 </span>
                 {main === m.id && <span class="pvi-tile__main">{t("Main")}</span>}
                 {typeLabel[m.type] && <span class="pvi-tile__type">{typeLabel[m.type]}</span>}
-                <div class="pvi-tile__foot">
-                  {groups.length === 0 && !selected && <span>{t("Unassigned")}</span>}
-                  {groups.slice(0, 2).map((key) => (
-                    <span class="pvi-chip" key={key}>
-                      {key === SHARED_KEY ? t("Shared") : props.groupLabels.get(key) ?? key}
-                    </span>
-                  ))}
-                  {groups.length > 2 && <span class="pvi-chip">+{groups.length - 2}</span>}
-                  {selected && main !== m.id && props.selected !== SHARED_KEY && (
-                    <button
-                      type="button"
-                      class="pvi-tile__action"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        props.onSetMain(m.id);
-                      }}
-                    >
-                      {t("Make main")}
-                    </button>
-                  )}
-                </div>
+                {(groups.length > 0 || (selected && main !== m.id && props.selected !== SHARED_KEY)) && (
+                  <div class="pvi-tile__foot">
+                    {groups.slice(0, 2).map((key) => (
+                      <span class="pvi-chip" key={key}>
+                        {key === SHARED_KEY ? t("Shared") : props.groupLabels.get(key) ?? key}
+                      </span>
+                    ))}
+                    {groups.length > 2 && <span class="pvi-chip">+{groups.length - 2}</span>}
+                    {selected && main !== m.id && props.selected !== SHARED_KEY && (
+                      <button
+                        type="button"
+                        class="pvi-tile__action"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          props.onSetMain(m.id);
+                        }}
+                      >
+                        {t("Make main")}
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}
@@ -232,9 +232,14 @@ export function MediaGrid(props: {
   );
 }
 
-export function VariantPreview(props: { product: ProductModel; config: NormalizedConfig; hideUnassigned: boolean }) {
-  const [variantId, setVariantId] = useState<number>(props.product.variants[0]?.id ?? 0);
-  const variant = props.product.variants.find((v) => v.id === variantId) ?? props.product.variants[0];
+/** What shoppers see for the selected group (its first variant). */
+export function GroupPreview(props: {
+  product: ProductModel;
+  config: NormalizedConfig;
+  hideUnassigned: boolean;
+  variant: ProductModel["variants"][number] | undefined;
+}) {
+  const variant = props.variant ?? props.product.variants[0];
   if (!variant) return null;
   const result = resolveVisibleMedia(
     props.config,
@@ -244,18 +249,7 @@ export function VariantPreview(props: { product: ProductModel; config: Normalize
   );
   const byId = new Map(props.product.media.map((m) => [m.id, m]));
   return (
-    <s-stack direction="block" gap="base">
-      <s-select
-        label={t("Preview variant")}
-        value={String(variant.id)}
-        onChange={(event) => setVariantId(Number(event.currentTarget.value))}
-      >
-        {props.product.variants.slice(0, 250).map((v) => (
-          <s-option value={String(v.id)} key={v.id}>
-            {v.title}
-          </s-option>
-        ))}
-      </s-select>
+    <s-stack direction="block" gap="small-300">
       <s-text color="subdued">
         {result.mode === "all"
           ? t("Shoppers see all {count} images (nothing assigned yet).", { count: result.visible.length })
