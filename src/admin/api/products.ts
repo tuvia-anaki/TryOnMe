@@ -75,12 +75,17 @@ export async function listProducts(params: {
   pageSize?: number;
   /** "updated": most recently edited first (home page). Default: by title. */
   sort?: "title" | "updated";
+  /** Only products with real variants: the ones variant images apply to. */
+  withVariants?: boolean;
 }): Promise<ProductPage> {
   const size = params.pageSize ?? 25;
   const search = params.search?.trim();
+  const terms: string[] = [];
+  if (params.withVariants) terms.push("has_only_default_variant:false");
   // Free-text search (title, SKU, vendor…); quoted so spaces and punctuation are safe.
+  if (search) terms.push(`"${search.replace(/["\\]/g, " ")}"`);
   const variables: Record<string, unknown> = {
-    query: search ? `"${search.replace(/["\\]/g, " ")}"` : null,
+    query: terms.length ? terms.join(" ") : null,
     sortKey: params.sort === "updated" ? "UPDATED_AT" : "TITLE",
     reverse: params.sort === "updated",
   };

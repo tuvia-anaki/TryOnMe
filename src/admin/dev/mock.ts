@@ -138,8 +138,9 @@ function handle(query: string, variables: Json): Json {
       let list = store.products;
       const q: string | null = variables.query;
       if (q) {
-        const term = q.replace(/^"|"$/g, "").toLowerCase();
-        list = list.filter((p) => p.title.toLowerCase().includes(term));
+        if (q.includes("has_only_default_variant:false")) list = list.filter((p) => p.variants.length > 1);
+        const term = q.replace("has_only_default_variant:false", "").trim().replace(/^"|"$/g, "").toLowerCase();
+        if (term) list = list.filter((p) => p.title.toLowerCase().includes(term));
       }
       const size = variables.first ?? variables.last ?? 25;
       let start = 0;

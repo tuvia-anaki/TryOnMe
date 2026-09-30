@@ -14,7 +14,12 @@ export function Products() {
   const query = useDebounced(search, 350);
   const [cursor, setCursor] = useState<{ after?: string | null; before?: string | null }>({});
   const [filter, setFilter] = useState<ProductFilter>(initial && FILTERS.includes(initial) ? initial : "all");
-  const page = useAsync(() => listProducts({ search: query, ...cursor, pageSize: 50 }), [query, cursor.after, cursor.before]);
+  // Only products with variants can be (or need to be) set up: skip the rest on those tabs.
+  const withVariants = filter !== "all";
+  const page = useAsync(
+    () => listProducts({ search: query, withVariants, ...cursor, pageSize: 50 }),
+    [query, withVariants, cursor.after, cursor.before],
+  );
 
   const rows = (page.data?.rows ?? []).filter((row) => matchesFilter(row, filter));
 
@@ -43,7 +48,14 @@ export function Products() {
                   setCursor({});
                 }}
               />
-              <FilterTabs value={filter} options={FILTERS} onChange={setFilter} />
+              <FilterTabs
+                value={filter}
+                options={FILTERS}
+                onChange={(value) => {
+                  setFilter(value);
+                  setCursor({});
+                }}
+              />
             </>
           }
           pagination={{

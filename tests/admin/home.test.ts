@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
-import { beforeEach, describe, expect, it } from "vitest";
-import type { ProductRow } from "../../src/admin/api/products";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { listProducts, type ProductRow } from "../../src/admin/api/products";
 import { canSetUp, matchesFilter } from "../../src/admin/components/ProductTable";
 import { availableLanguages, currentLanguage, initI18n, languageName, onLanguageChange, setLanguage, t } from "../../src/admin/i18n";
 
@@ -66,5 +66,23 @@ describe("language picker", () => {
     expect(languages).toEqual(expect.arrayContaining(["de", "ja", "pt-BR", "zh-TW"]));
     expect(languageName("de")).toBe("Deutsch");
     expect(languageName("ja")).toBe("日本語");
+  });
+});
+
+describe("product list query", () => {
+  it("asks Shopify only for products with real variants when the list needs them", async () => {
+    const sent: { query: string | null; sortKey: string; reverse: boolean }[] = [];
+    vi.stubGlobal("fetch", async (_url: string, init: RequestInit) => {
+      sent.push(JSON.parse(String(init.body)).variables);
+      const products = { pageInfo: { hasNextPage: false, hasPreviousPage: false, startCursor: null, endCursor: null }, nodes: [] };
+      return new Response(JSON.stringify({ data: { products } }), { headers: { "Content-Type": "application/json" } });
+    });
+    await listProducts({ withVariants: true, sort: "updated" });
+    await listProducts({ withVariants: true, search: 'red "tee"' });
+    await listProducts({ search: "mug" });
+    expect(sent[0]).toMatchObject({ query: "has_only_default_variant:false", sortKey: "UPDATED_AT", reverse: true });
+    expect(sent[1].query).toBe('has_only_default_variant:false "red  tee "');
+    expect(sent[2]).toMatchObject({ query: '"mug"', sortKey: "TITLE", reverse: false });
+    vi.unstubAllGlobals();
   });
 });

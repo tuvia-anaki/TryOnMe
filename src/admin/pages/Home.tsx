@@ -5,11 +5,11 @@ import type { AppSettings } from "../../shared/settings";
 import { listProducts, type ProductPage } from "../api/products";
 import { loadAppContext } from "../api/settings";
 import { loadThemeStatus, themeEditorUrl, type ThemeStatus } from "../api/theme";
-import { ErrorBanner, openExternal } from "../components/common";
+import { ErrorBanner, openAdmin, openExternal } from "../components/common";
 import { LanguagePicker } from "../components/LanguagePicker";
-import { FilterTabs, ProductTable, matchesFilter, type ProductFilter } from "../components/ProductTable";
+import { FilterTabs, ProductTable, canSetUp, matchesFilter, type ProductFilter } from "../components/ProductTable";
 import { t } from "../i18n";
-import { useAsync, type AsyncState } from "../lib/hooks";
+import { useAsync, useDebounced, type AsyncState } from "../lib/hooks";
 import { navigate } from "../router";
 
 const GUIDE_HIDDEN_KEY = "pvi:setup-guide-hidden";
@@ -200,9 +200,37 @@ function swatchStatus(settings: AppSettings | null) {
   return { tone: "neutral" as const, label: t("Off"), text: t("Show color and image swatches instead of dropdowns."), on: false };
 }
 
-function HomeProducts({ list }: { list: AsyncState<ProductPage> }) {
+const ROWS_STEP = 5;
+
+/** Products the app applies to, like on competitors' home pages: what's left to set up, and what's done. */
+function HomeProducts({ recent }: { recent: AsyncState<ProductPage> }) {
   const [tab, setTab] = useState<ProductFilter>("todo");
-  const rows = (list.data?.rows ?? []).filter((row) => matchesFilter(row, tab)).slice(0, 5);
+  const [search, setSearch] = useState("");
+  const [limit, setLimit] = useState(ROWS_STEP);
+  const query = useDebounced(search.trim(), 350);
+  const found = useAsync(
+    () => (query ? listProducts({ search: query, withVariants: true, pageSize: 50 }) : Promise.resolve(null)),
+    [query],
+  );
+  useEffect(() => setLimit(ROWS_STEP), [tab, query]);
+
+  const list = query ? found : recent;
+  const all = list.data?.rows ?? [];
+  const matching = all.filter((row) => matchesFilter(row, tab));
+
+  let empty: ComponentChildren;
+  if (query) empty = t("No products match “{search}”.", { search: query });
+  else if (tab === "configured") empty = t("None of your recently edited products are set up yet.");
+  else if (all.some(canSetUp)) empty = t("Nothing left to set up among your recently edited products.");
+  else
+    empty = (
+      <s-stack direction="block" gap="small-200" alignItems="center">
+        <s-text color="subdued">
+          {t("Variant images work on products with at least 2 variants (like colors) and 2 images. None of your recent products have that yet.")}
+        </s-text>
+        <s-button onClick={() => openAdmin("/products")}>{t("Open products in Shopify")}</s-button>
+      </s-stack>
+    );
 
   return (
     <s-section padding="none" accessibilityLabel={t("Products")}>
@@ -214,9 +242,18 @@ function HomeProducts({ list }: { list: AsyncState<ProductPage> }) {
               {t("View all")}
             </s-button>
           </s-grid>
-          <s-stack direction="inline">
-            <FilterTabs value={tab} options={["todo", "configured"]} onChange={setTab} />
-          </s-stack>
+          <s-grid gridTemplateColumns="@container (inline-size <= 480px) 1fr, auto 1fr" gap="small-300" alignItems="center">
+            <s-stack direction="inline">
+              <FilterTabs value={tab} options={["todo", "configured"]} onChange={setTab} />
+            </s-stack>
+            <s-search-field
+              label={t("Search products")}
+              labelAccessibilityVisibility="exclusive"
+              placeholder={t("Search by title")}
+              value={search}
+              onInput={(event) => setSearch(event.currentTarget.value ?? "")}
+            />
+          </s-grid>
         </s-grid>
       </s-box>
       {list.error ? (
@@ -224,16 +261,16 @@ function HomeProducts({ list }: { list: AsyncState<ProductPage> }) {
           <ErrorBanner error={list.error} onRetry={list.reload} />
         </s-box>
       ) : (
-        <ProductTable
-          variant="compact"
-          rows={rows}
-          loading={list.loading}
-          empty={
-            tab === "todo"
-              ? t("Nothing left to set up among your recently edited products.")
-              : t("None of your recently edited products are set up yet.")
-          }
-        />
+        <ProductTable variant="compact" rows={matching.slice(0, limit)} loading={list.loading} empty={empty} />
+      )}
+      {!list.loading && matching.length > limit && (
+        <s-box padding="small">
+          <s-stack direction="inline" justifyContent="center">
+            <s-button variant="tertiary" onClick={() => setLimit(limit + ROWS_STEP)}>
+              {t("Show more")}
+            </s-button>
+          </s-stack>
+        </s-box>
       )}
     </s-section>
   );
@@ -242,7 +279,7 @@ function HomeProducts({ list }: { list: AsyncState<ProductPage> }) {
 export function Home() {
   const context = useAsync(() => loadAppContext(), []);
   const theme = useAsync(() => loadThemeStatus(), []);
-  const recent = useAsync(() => listProducts({ pageSize: 50, sort: "updated" }), []);
+  const recent = useAsync(() => listProducts({ pageSize: 50, sort: "updated", withVariants: true }), []);
   const [guideHidden, setGuideHidden] = useState(() => readFlag(GUIDE_HIDDEN_KEY));
 
   const settings = context.data?.settings ?? null;
@@ -382,7 +419,7 @@ export function Home() {
           </s-grid>
         </s-query-container>
 
-        <HomeProducts list={recent} />
+        <HomeProducts recent={recent} />
 
         <s-section>
           <s-grid gridTemplateColumns="@container (inline-size <= 520px) 1fr, 1fr auto" gap="large" alignItems="center">
