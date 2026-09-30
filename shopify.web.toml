@@ -2,6 +2,8 @@
 # that rebuilds the storefront scripts into the theme app extension.
 name = "admin"
 roles = ["frontend", "backend"]
+# `shopify app dev` pings this on start; the dev server verifies and acknowledges it.
+webhooks_path = "/webhooks/app/uninstalled"
 
 [commands]
 dev = "npm run dev:web"
