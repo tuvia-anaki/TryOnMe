@@ -42,7 +42,8 @@ src/storefront/              Storefront scripts → extensions/variant-cards/ass
 src/admin/                   Embedded admin (Preact + Polaris web components + App Bridge)
 src/server/node.ts           Node server (Render): serves dist/, security headers, webhooks, /healthz
 src/worker/                  Webhook verification + the same server as a Cloudflare Worker (alternative host)
-tests/                       Vitest: core logic, Liquid (liquidjs), theme status, real-theme compatibility
+tests/                       Vitest: core logic, Liquid (liquidjs), theme status, real-theme compatibility;
+                             tests/browser: the real-browser check on theme demo stores
 ```
 
 ## Run it on a development store
@@ -82,6 +83,13 @@ npm run deploy
 
 ```bash
 npm run check   # typecheck + tests + production build
+```
+
+Real-browser check (needs Google Chrome and internet): loads Shopify's theme demo stores through a local proxy that adds the storefront script, in headless Chrome, and checks every variant card — its own color's photo actually visible, links, title, price, one "Sold out" label, no duplicates:
+
+```bash
+npm run test:browser                                # every theme demo
+node tests/browser/run.mjs dawn "horizon@/search?q=shirt"   # some themes / pages
 ```
 
 ## Storefront events (for developers)

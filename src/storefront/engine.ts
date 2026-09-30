@@ -1,7 +1,9 @@
+import { findMoney, type MoneyPattern } from "../shared/money";
 import { arrangeCards, productCards, type VariantCard, type VcProduct } from "../shared/split";
 import { findGrids, loadProduct, mainScope, type Grid, type ThemeCard } from "./cards";
 import type { PageContext } from "./context";
 import { copyCard, DONE_ATTR, HIDDEN_ATTR, renderCard, type RenderContext } from "./patch";
+import { revealWhenVisible } from "./reveal";
 
 export interface RenderedCard {
   el: Element;
@@ -9,6 +11,43 @@ export interface RenderedCard {
 }
 
 export type Decorator = (rendered: RenderedCard[], grid: Element) => void;
+
+/** The theme section an element is in ("shopify-section-template--123__main"), or null. */
+function sectionOf(el: Element): string | null {
+  return el.closest("[id^='shopify-section-']")?.id ?? null;
+}
+
+/**
+ * Where the main grid sits, so a grid the theme redraws (filters, sorting) or adds (infinite
+ * scroll) is recognized, but not another list in the same section (a carousel in the filters
+ * drawer): its section, and the path to it — ids, or tags with their first (base) class, since
+ * themes append state classes ("is-loading", "grid--loaded") that come and go.
+ */
+function signatureOf(grid: Element): string {
+  const path: string[] = [];
+  for (let node: Element | null = grid; node && path.length < 4 && !node.id.startsWith("shopify-section-"); node = node.parentElement) {
+    path.unshift(node.id ? `#${node.id}` : `${node.tagName.toLowerCase()}.${node.classList[0] ?? ""}`);
+    if (node.id) break;
+  }
+  return `${sectionOf(grid) ?? ""}|${path.join(">")}`;
+}
+
+/**
+ * A product card shows the product's title or a price. Promo tiles in the grid that link to a
+ * product ("Polar Ignite — save up to 50%") show neither, and are left alone.
+ */
+function isProductCard(el: Element, product: VcProduct, money: MoneyPattern[]): boolean {
+  const text = (el.textContent ?? "").replace(/\s+/g, " ");
+  const title = product.title.replace(/\s+/g, " ").trim().toLowerCase();
+  return (!!title && text.toLowerCase().includes(title)) || (money.length > 0 && !!findMoney(text, money));
+}
+
+/**
+ * The template's own collection/search section is keyed "main", "product-grid",
+ * "collection-products", "main-search"… Sections merchants add (product sliders,
+ * featured collections) get other keys, and may hold more cards than the main grid.
+ */
+const MAIN_SECTION = /__(main|product[-_]?grid|collection|search)/i;
 
 /**
  * Splits the product cards of every grid on the page and keeps doing it when
@@ -20,6 +59,9 @@ export class Engine {
   private observer: MutationObserver | null = null;
   private busy = false;
   private again = false;
+  /** Where the main grid sits (see signatureOf); undefined until it's found. */
+  private mainGrid: string | undefined = undefined;
+  private readonly mainGrids = new WeakSet<Element>();
 
   constructor(private readonly ctx: PageContext) {
     this.render = { settings: ctx.settings, effective: ctx.effective, money: ctx.money, texts: ctx.texts };
@@ -29,13 +71,29 @@ export class Engine {
     this.decorators.push(fn);
   }
 
-  /** The grids to split: only the main one on collection and search pages, every grid on the home page. */
+  /**
+   * The grids to split: every grid on the home page; on collection and search pages only the
+   * main one. It's remembered, so later cards count only when they're in that grid (or the grid
+   * the theme redraws for filters, sorting and infinite scroll), never other product lists
+   * ("Recently viewed", recommendations, a carousel in the filters drawer).
+   */
   grids(scope: Element = mainScope()): Grid[] {
     const { gridSelector, cardSelector } = this.ctx.settings.advanced;
     let grids = findGrids(scope, { cardSelector, processed: DONE_ATTR });
     if (gridSelector) grids = grids.filter((g) => g.parent.matches(gridSelector) || !!g.parent.closest(gridSelector));
-    const home = this.ctx.template.split(".")[0] === "index";
-    return home ? grids : grids.slice(0, 1);
+    if (this.ctx.template.split(".")[0] === "index") return grids;
+    if (this.mainGrid === undefined) {
+      const main = grids.find((g) => MAIN_SECTION.test(sectionOf(g.parent) ?? "")) ?? grids[0];
+      if (!main) return [];
+      this.mainGrid = signatureOf(main.parent);
+      this.mainGrids.add(main.parent);
+      return [main];
+    }
+    return grids.filter((g) => {
+      if (!this.mainGrids.has(g.parent) && signatureOf(g.parent) !== this.mainGrid) return false;
+      this.mainGrids.add(g.parent);
+      return true;
+    });
   }
 
   async run(): Promise<void> {
@@ -70,7 +128,7 @@ export class Engine {
     const managed: { source: ThemeCard; product: VcProduct; cards: VariantCard[] }[] = [];
     cards.forEach((source, i) => {
       const product = products[i];
-      if (!product) return;
+      if (!product || !isProductCard(source.el, product, this.ctx.money)) return;
       managed.push({
         source,
         product,
@@ -99,6 +157,11 @@ export class Engine {
     }
 
     this.place(grid.parent, managed.map((m) => m.source.el), rendered);
+    // Copies made before the theme revealed their card (reveal-on-scroll themes) must not stay invisible.
+    for (const { el, card } of rendered) {
+      const source = sourceOf.get(card)!.el;
+      if (el !== source) revealWhenVisible(el, source);
+    }
     // Products that are hidden entirely in this collection.
     for (const m of managed) if (!used.has(m.source.el)) m.source.el.setAttribute(HIDDEN_ATTR, "");
     for (const decorate of this.decorators) decorate(rendered, grid.parent);

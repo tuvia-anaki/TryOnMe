@@ -21,8 +21,10 @@ export interface RenderContext {
 
 const SKIP_TEXT = `script, style, template, noscript, [${UI_ATTR}]`;
 const PRICE_SCOPE = "[class*='price' i], .money, product-price, [data-price], [data-product-price]";
-const UNIT_PRICE = "[class*='unit' i]";
-const COMPARE = "s, del, strike, [class*='compare' i], [class*='was-price' i], [class*='price--was' i], [class*='original-price' i], [class*='old-price' i], [class*='price-old' i]";
+const UNIT_PRICE = "[class*='unit-price' i], [class*='unit_price' i], [class*='unitprice' i], [class*='price--unit' i], [class*='price__unit' i], unit-price";
+/** The crossed-out "was" price. (Never just any class with "compare" in it: cards can be "card--product-compare".) */
+const COMPARE =
+  "s, del, strike, [class*='compare' i][class*='price' i], [class*='compare-at' i], [class*='compare_at' i], [class*='compareat' i], [class*='was-price' i], [class*='price--was' i], [class*='original-price' i], [class*='old-price' i], [class*='price-old' i]";
 const THEME_SWATCHES = "swatches-component, variant-swatches, color-swatches, [class*='swatch' i], [class*='color-option' i], [class*='colour-option' i]";
 const SALE_BADGES = "[class*='badge' i][class*='sale' i], [class*='sale-badge' i], [class*='badge--sale' i], [class*='badge' i][class*='discount' i], [class*='badge' i][class*='save' i], [class*='on-sale' i][class*='badge' i]";
 
@@ -32,6 +34,14 @@ let copies = 0;
 function within(node: Element, selector: string, card: Element): Element | null {
   const match = node.closest(selector);
   return match && match !== card && card.contains(match) ? match : null;
+}
+
+/**
+ * Small bits of a card (a price, a badge) found by class name must stay small: a big container
+ * whose class happens to match ("card--sale-badge", "card--product-compare") holds the photo or title.
+ */
+function isSmall(node: Element): boolean {
+  return !node.querySelector("img, picture, video, h2, h3, h4, a[href*='/products/']") && (node.textContent ?? "").trim().length <= 60;
 }
 
 /* ------------------------------------------------------------------ */
@@ -89,9 +99,10 @@ export function withVariant(href: string, variantId: number): string {
   }
 }
 
-/** Point every link to the product in a card at one of its variants. */
-export function linkCardTo(el: Element, handle: string, variantId: number): void {
+/** Point every link to the product in a card at one of its variants (except the ones `keep` says). */
+export function linkCardTo(el: Element, handle: string, variantId: number, keep?: (node: Element) => boolean): void {
   const update = (node: Element, attr: string) => {
+    if (keep?.(node)) return;
     const value = node.getAttribute(attr);
     if (value && handleFromHref(value) === handle) node.setAttribute(attr, withVariant(value, variantId));
   };
@@ -103,7 +114,12 @@ export function linkCardTo(el: Element, handle: string, variantId: number): void
 }
 
 function patchLinks(el: Element, card: VariantCard): void {
-  linkCardTo(el, card.product.handle, card.variant.id);
+  // Links named after another color (the theme's own swatches, "Navy") keep pointing at it.
+  const index = card.label === null ? -1 : card.variant.options.indexOf(card.label);
+  const others = new Set(index < 0 ? [] : card.product.variants.map((v) => v.options[index]).filter((v) => v !== card.label).map((v) => v.trim().toLowerCase()));
+  const keep = (node: Element) =>
+    [node.textContent, node.getAttribute("title"), node.getAttribute("aria-label"), node.getAttribute("data-value")].some((text) => !!text && others.has(text.trim().toLowerCase()));
+  linkCardTo(el, card.product.handle, card.variant.id, keep);
 }
 
 function patchForms(el: Element, card: VariantCard): void {
@@ -261,7 +277,8 @@ function moneyNodes(el: Element, patterns: MoneyPattern[]): MoneyNode[] {
     const inPrice = !!within(parent, PRICE_SCOPE, el) || parent === el;
     const match = findMoney(node.data, patterns, inPrice);
     if (!match) continue;
-    out.push({ node, pattern: match.pattern, compare: !!within(parent, COMPARE, el) });
+    const compareHolder = within(parent, COMPARE, el);
+    out.push({ node, pattern: match.pattern, compare: !!compareHolder && isSmall(compareHolder) });
   }
   return out;
 }
@@ -285,7 +302,7 @@ function setSaleState(el: Element, onSale: boolean): void {
     if (onSale && node.classList.contains("price")) node.classList.add("price--on-sale");
     if (!onSale) node.classList.remove("price--on-sale");
   }
-  for (const badge of Array.from(el.querySelectorAll(SALE_BADGES))) {
+  for (const badge of Array.from(el.querySelectorAll(SALE_BADGES)).filter(isSmall)) {
     if (badge.closest(`[${UI_ATTR}]`)) continue;
     if (onSale) badge.removeAttribute(HIDDEN_ATTR);
     else badge.setAttribute(HIDDEN_ATTR, "");
@@ -304,7 +321,8 @@ function patchPrice(el: Element, card: VariantCard, ctx: RenderContext): void {
   const compareAt = card.minPrice === card.maxPrice ? card.variant.compareAtPrice : null;
   for (const { node, pattern, compare } of nodes) {
     if (!compare) continue;
-    const holder = within(node.parentElement!, COMPARE, el) ?? node.parentElement!;
+    const found = within(node.parentElement!, COMPARE, el);
+    const holder = found && isSmall(found) ? found : node.parentElement!;
     if (compareAt) {
       node.data = formatMoney(pattern, compareAt);
       holder.removeAttribute(HIDDEN_ATTR);
@@ -331,6 +349,32 @@ export function insertionPoint(el: Element): { parent: Element; before: Node | n
   return { parent: anchor.parentElement ?? el, before: anchor.nextSibling };
 }
 
+/** "Sold out" as themes write it, in common store languages. */
+const SOLD_OUT_WORDS =
+  /^(sold[\s-]?out|out of stock|ausverkauft|épuisé|agotado|esgotado|esaurito|uitverkocht|slutsåld|udsolgt|utsolgt|loppuunmyyty|wyprzedane|vyprodáno|売り切れ|品切れ|품절|已售罄|售罄|已售完|tükendi|stokta yok)$/i;
+
+/** The theme's own "Sold out" labels in a card (innermost elements carrying just that text). */
+function soldOutLabels(el: Element, text: string): Element[] {
+  const wanted = text.trim().toLowerCase();
+  return Array.from(el.querySelectorAll("span, div, p, strong, em, small, b, dd")).filter((node) => {
+    if (node.closest(`[${UI_ATTR}], button`) || node.querySelector("img, a, button, input")) return false;
+    const own = (node.textContent ?? "").trim();
+    if (!own || own.length > 30 || Array.from(node.children).some((child) => (child.textContent ?? "").trim() === own)) return false;
+    return own.toLowerCase() === wanted || SOLD_OUT_WORDS.test(own);
+  });
+}
+
+/** A variant card says "Sold out" exactly when its variants are: the theme's label, or ours. */
+function setSoldOutState(el: Element, card: VariantCard, ctx: RenderContext): void {
+  const labels = soldOutLabels(el, ctx.texts.soldOut);
+  if (card.available) {
+    // The theme's label is about the whole product; this color can be bought.
+    for (const label of labels) label.setAttribute(HIDDEN_ATTR, "");
+    return;
+  }
+  if (!labels.length && ctx.settings.card.soldOutBadge) addBadge(el, ctx.texts.soldOut || "Sold out");
+}
+
 function addBadge(el: Element, text: string): void {
   const badge = el.ownerDocument.createElement("span");
   badge.setAttribute(UI_ATTR, "badge");
@@ -344,7 +388,7 @@ function hideThemeSwatches(el: Element): void {
   for (const node of Array.from(el.querySelectorAll(THEME_SWATCHES))) {
     if (node.closest(`[${UI_ATTR}]`) || node.parentElement?.closest(THEME_SWATCHES)) continue;
     // Never the card's own image or title.
-    if (node.querySelector("h2, h3, h4, [class*='title' i]") || productImages(node).length > 2) continue;
+    if (node.querySelector("h2, h3, h4, [class*='title' i]") || node.querySelector(PRICE_SCOPE) || productImages(node).length > 2) continue;
     node.setAttribute(HIDDEN_ATTR, "");
   }
 }
@@ -365,6 +409,6 @@ export function renderCard(el: Element, card: VariantCard, ctx: RenderContext): 
     if (ctx.settings.card.hideThemeSwatches) hideThemeSwatches(el);
   }
   patchPrice(el, card, ctx);
-  if (card.split && !card.available && ctx.settings.card.soldOutBadge) addBadge(el, ctx.texts.soldOut || "Sold out");
+  if (card.split) setSoldOutState(el, card, ctx);
   return el;
 }

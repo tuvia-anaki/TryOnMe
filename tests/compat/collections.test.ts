@@ -113,7 +113,12 @@ run("collection pages of real themes", () => {
       let priced = 0;
       let debugged = 0;
       for (const { el, card } of split) {
-        const links = Array.from(el.querySelectorAll<HTMLAnchorElement>("a[href]")).filter((a) => handleFromHref(a.getAttribute("href")) === card.product.handle);
+        // Links for another color (the theme's own swatches) keep pointing at that color.
+        const index = card.label === null ? -1 : card.variant.options.indexOf(card.label);
+        const others = new Set(index < 0 ? [] : card.product.variants.map((v) => v.options[index]).filter((v) => v !== card.label).map((v) => v.trim().toLowerCase()));
+        const otherColor = (a: Element) =>
+          [a.textContent, a.getAttribute("title"), a.getAttribute("aria-label"), a.getAttribute("data-value")].some((t) => !!t && others.has(t.trim().toLowerCase()));
+        const links = Array.from(el.querySelectorAll<HTMLAnchorElement>("a[href]")).filter((a) => handleFromHref(a.getAttribute("href")) === card.product.handle && !otherColor(a));
         if (!links.length || !links.every((a) => a.getAttribute("href")!.includes(`variant=${card.variant.id}`))) problems.push(`${card.key}: links`);
         const squash = (text: string) => text.replace(/\s+/g, " ");
         if (squash(el.textContent ?? "").includes(squash(`${card.product.title} - ${card.label}`))) titled++;

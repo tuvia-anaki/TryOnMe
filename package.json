@@ -21,7 +21,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
     "test:watch": "vitest",
-    "check": "npm run typecheck && npm test && npm run build"
+    "check": "npm run typecheck && npm test && npm run build",
+    "test:browser": "npm run build:storefront && node tests/browser/run.mjs"
   },
   "dependencies": {
     "@preact/preset-vite": "^2.10.6",
