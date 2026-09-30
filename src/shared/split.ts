@@ -1,4 +1,4 @@
-import { isColorOptionName } from "./product";
+import { isAmountOptionName, isColorOptionName, isSizeOptionName } from "./product";
 import { splitOptionName, type SplitBy } from "./settings";
 
 /**
@@ -64,14 +64,45 @@ export interface SplitOptions {
 
 const sameName = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
 
+/** Values like "$25.00", "40" or "500": amounts and sizes, never a style. */
+const NUMBER_LIKE = /^[^\p{L}]*\p{N}[^\p{L}]*$/u;
+
+/**
+ * "Each style": the option that changes how the product looks. That's its color option, or
+ * else the first option whose values each have their own photo (Material, Scent, Pattern…).
+ * Sizes and amounts (gift card denominations) never count, even with a photo each. -1 = none.
+ */
+export function styleOptionIndex(product: VcProduct): number {
+  const values = (index: number) => product.variants.map((v) => v.options[index] ?? "");
+  const color = product.options.findIndex((option, index) => isColorOptionName(option) && new Set(values(index)).size > 1);
+  if (color >= 0) return color;
+  return product.options.findIndex(
+    (option, index) =>
+      !isSizeOptionName(option) && !isAmountOptionName(option) && !values(index).every((value) => NUMBER_LIKE.test(value)) && hasOwnPhotos(product, index),
+  );
+}
+
+/** Each value of the option shows one photo, and they aren't all the same photo. */
+function hasOwnPhotos(product: VcProduct, index: number): boolean {
+  const photos = new Map<string, string>();
+  for (const { options, image } of product.variants) {
+    const value = options[index];
+    if (value === undefined || !image) continue;
+    const seen = photos.get(value);
+    if (seen === undefined) photos.set(value, image);
+    else if (seen !== image) return false;
+  }
+  return new Set(photos.values()).size > 1;
+}
+
 /** Option positions that define a card, or null when the product stays one card. "each" = each variant. */
 export function splitIndexes(product: VcProduct, by: SplitBy): number[] | "each" | null {
   if (product.variants.length < 2 || !product.options.length) return null;
   if (by === "all") return "each";
   const name = splitOptionName(by);
-  // A named option, or else the color option. Products without it stay a single card
-  // (sizes of one color would all show the same image).
-  const index = name ? product.options.findIndex((option) => sameName(option, name)) : product.options.findIndex((option) => isColorOptionName(option));
+  // A named option, or else the option that changes the look. Products without it stay a
+  // single card (sizes of one color would all show the same image).
+  const index = name ? product.options.findIndex((option) => sameName(option, name)) : styleOptionIndex(product);
   return index >= 0 ? [index] : null;
 }
 

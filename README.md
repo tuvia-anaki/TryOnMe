@@ -1,8 +1,8 @@
 # Variant Cards
 
-A **100% free** Shopify app that shows every product variant as its own product card on collection and search pages — each color gets its own card with its own image, title, price and link. A free alternative to paid apps like *Stamp Show Variants Collection* ($12–$24/month).
+A **100% free** Shopify app that shows every product variant as its own product card on collection and search pages — each color, material or scent gets its own card with its own image, title, price and link. A free alternative to paid apps like *Stamp Show Variants Collection* ($12–$24/month).
 
-- **Variant cards** — one card per color (the color option is found automatically, in any language), per variant, or per value of any other option (Size, Material, Scent…). Cards reuse the theme's own card design, so they look native. Custom titles (`{product} - {value}`, `{vendor}`, `{option1}`…), price formats (theme / "From $X" / "$X – $Y"), sale prices and sold-out badges per variant.
+- **Variant cards** — one card per style (the default: the color option, found automatically in any language, or else the option whose variants have their own photos, like Material or Scent; sizes stay together), per variant, or per value of any option you pick (Color, Size, Material, Scent…). Cards reuse the theme's own card design, so they look native. Custom titles (`{product} - {value}`, `{vendor}`, `{option1}`…), price formats (theme / "From $X" / "$X – $Y"), sale prices and sold-out badges per variant.
 - **Where it runs** — all collections or the ones you choose, the all-products page, search results and (optionally) home page product grids. Works with the theme's filters, sorting and its own infinite scroll.
 - **Hide and sort** — hide sold-out variants or variants without their own image, mix variants of different products, sold-out cards last.
 - **Per-collection settings** — turn cards on or off for one collection, **drag-and-drop the order** of its variant cards, hide individual cards, or override any setting.
@@ -102,5 +102,5 @@ window.VariantCards.refresh();                         // split cards added by o
 
 ## Data format
 
-Shop settings (`app.metafields.variant_cards.settings`, JSON): see `AppSettings` in `src/shared/settings.ts`. `split.by` is `"auto"` (each color), `"all"` (each variant) or `"option:<name>"` (each value of the option with that name, e.g. `"option:Scent"`).
+Shop settings (`app.metafields.variant_cards.settings`, JSON): see `AppSettings` in `src/shared/settings.ts`. `split.by` is `"auto"` (each style: the color option, or else the option whose values have their own photos; never sizes), `"all"` (each variant) or `"option:<name>"` (each value of the option with that name, e.g. `"option:Scent"`).
 Collection overrides (`collection.metafields['$app:variant_cards'].settings`, JSON): `CollectionSettings` — `null` fields follow the shop settings; `order` and `hidden` hold card keys like `"8123456789:Red"` (product id + split value) or `"8123456789"` (the whole product).

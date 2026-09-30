@@ -1,6 +1,5 @@
 import { COLLECTION_KEY, COLLECTION_NAMESPACE } from "../../shared/constants";
 import { isDefaultCollectionSettings, sanitizeCollectionSettings, type CollectionSettings } from "../../shared/settings";
-import { isColorOptionName } from "../../shared/product";
 import type { VcProduct } from "../../shared/split";
 import { gql, throwUserErrors, type UserError } from "./graphql";
 
@@ -277,7 +276,7 @@ export interface StoreOption {
 
 let optionNames: Promise<StoreOption[]> | null = null;
 
-/** The options the store's products use besides color, most common first (from recently updated products; asked once per visit). */
+/** The options the store's products use (Color, Size, Scent…), most common first (from recently updated products; asked once per visit). */
 export function loadOptionNames(): Promise<StoreOption[]> {
   optionNames ??= fetchOptionNames();
   optionNames.catch(() => {
@@ -293,7 +292,7 @@ async function fetchOptionNames(): Promise<StoreOption[]> {
     for (const option of product.options) {
       const name = option.name.trim();
       const key = name.toLowerCase();
-      if (!name || key === "title" || isColorOptionName(name) || option.optionValues.length < 2) continue;
+      if (!name || key === "title" || option.optionValues.length < 2) continue;
       const entry = found.get(key);
       if (entry) entry.products++;
       else found.set(key, { name, products: 1, example: option.optionValues[0]?.name ?? "" });

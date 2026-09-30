@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { isSizeOptionName } from "../../src/shared/product";
 import { arrangeCards, formatTitle, fromAjaxProduct, productCards, splitIndexes, type VcProduct } from "../../src/shared/split";
 
 const tee = (): VcProduct =>
@@ -38,11 +39,53 @@ describe("splitting products into variant cards", () => {
     expect(splitIndexes(p, "option:Material")).toBeNull();
     expect(splitIndexes(p, "all")).toBe("each");
     expect(productCards(p, { ...base, by: "all" })).toHaveLength(4);
-    // Automatic only splits by color: a sizes-only product stays one card.
+    // "Each style" never splits sizes, nor options whose values have no photos of their own.
     const sizes = tee();
-    sizes.options = ["Size", "Material"];
+    sizes.options = ["Size", "Fit"];
+    sizes.variants.forEach((v) => (v.image = null));
     expect(splitIndexes(sizes, "auto")).toBeNull();
     expect(productCards(sizes, base)).toHaveLength(1);
+  });
+
+  it("each style: the color option, or else the option whose values have their own photos", () => {
+    const product = (options: string[], variants: [string[], string | null][]): VcProduct =>
+      fromAjaxProduct({
+        id: 7,
+        handle: "p",
+        title: "Candle",
+        options: options.map((name) => ({ name })),
+        variants: variants.map(([values, image], i) => ({ id: 70 + i, title: values.join(" / "), options: values, available: true, price: 1000, featured_image: image ? { src: image } : null })),
+        featured_image: "//cdn/main.jpg",
+      });
+    // A scent with its own photos gets its own card.
+    const scents = product(["Scent"], [[["Fig"], "//cdn/fig.jpg"], [["Rose"], "//cdn/rose.jpg"]]);
+    expect(splitIndexes(scents, "auto")).toEqual([0]);
+    expect(productCards(scents, base).map((c) => c.label)).toEqual(["Fig", "Rose"]);
+    // Without photos, or with one photo for all, the product stays one card (gift card amounts, lengths…).
+    expect(splitIndexes(product(["Scent"], [[["Fig"], null], [["Rose"], null]]), "auto")).toBeNull();
+    expect(splitIndexes(product(["Scent"], [[["Fig"], "//cdn/one.jpg"], [["Rose"], "//cdn/one.jpg"]]), "auto")).toBeNull();
+    // Amounts never count, even with a picture each: Shopify's gift cards, or numbers under any name.
+    expect(splitIndexes(product(["Denominations"], [[["$10.00"], "//cdn/10.jpg"], [["$25.00"], "//cdn/25.jpg"]]), "auto")).toBeNull();
+    expect(splitIndexes(product(["Montant"], [[["10 €"], "//cdn/10.jpg"], [["25 €"], "//cdn/25.jpg"]]), "auto")).toBeNull();
+    expect(splitIndexes(product(["EU"], [[["40"], "//cdn/40.jpg"], [["41.5"], "//cdn/41.jpg"]]), "auto")).toBeNull();
+    // They still split when picked by name.
+    expect(splitIndexes(product(["Denominations"], [[["$10.00"], "//cdn/10.jpg"], [["$25.00"], "//cdn/25.jpg"]]), "option:Denominations")).toEqual([0]);
+    // Sizes stay together even when each has a photo.
+    expect(splitIndexes(product(["Size"], [[["A4"], "//cdn/a4.jpg"], [["A3"], "//cdn/a3.jpg"]]), "auto")).toBeNull();
+    // Size first, material second: the material defines the look.
+    const cotton = "//cdn/cotton.jpg";
+    const linen = "//cdn/linen.jpg";
+    const shirts = product(["Size", "Material"], [[["S", "Cotton"], cotton], [["M", "Cotton"], cotton], [["S", "Linen"], linen], [["M", "Linen"], null]]);
+    expect(splitIndexes(shirts, "auto")).toEqual([1]);
+    // A color option with a single value doesn't count.
+    expect(splitIndexes(product(["Color", "Material"], [[["Black", "Cotton"], cotton], [["Black", "Linen"], linen]]), "auto")).toEqual([1]);
+    // A photo per variant (not per value) doesn't tell which option matters: one card.
+    expect(splitIndexes(product(["Material", "Size"], [[["Cotton", "S"], "//cdn/1.jpg"], [["Cotton", "M"], "//cdn/2.jpg"], [["Linen", "S"], "//cdn/3.jpg"]]), "auto")).toBeNull();
+  });
+
+  it("recognizes size options in common store languages", () => {
+    for (const name of ["Size", "Shoe size", "Size (EU)", "Taille", "Größe", "Tamaño", "Størrelse", "サイズ", "尺码", "Kích thước"]) expect(isSizeOptionName(name), name).toBe(true);
+    for (const name of ["Color", "Material", "Scent", "Sized pack", "Style"]) expect(isSizeOptionName(name), name).toBe(false);
   });
 
   it("applies hide rules but never hides the whole product", () => {

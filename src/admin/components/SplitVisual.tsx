@@ -2,10 +2,10 @@ import { useId } from "preact/hooks";
 
 /**
  * Tiny pictures of a collection grid for each "what gets its own card" choice:
- * one card per color, per variant, per value of another option, or one per product.
+ * one card per style, per variant, per value of an option, or one per product.
  */
 
-export type SplitKind = "color" | "variant" | "option" | "none";
+export type SplitKind = "style" | "variant" | "option" | "none";
 
 const TEE = "M8 3L4 5L2 9l3 1.5L6 9v12h12V9l1 1.5L22 9l-2-4-4-2c-1 2-7 2-8 0z";
 
@@ -34,7 +34,6 @@ function Card(props: { x: number; w: number; fill: string; label?: string; dots?
 export function SplitVisual({ kind }: { kind: SplitKind }) {
   const id = useId();
   const stripes = `${id}-stripes`;
-  const dots = `${id}-dots`;
   return (
     <svg viewBox="0 0 132 60" class="vc-split-visual">
       <defs>
@@ -42,16 +41,12 @@ export function SplitVisual({ kind }: { kind: SplitKind }) {
           <rect width="4" height="4" fill="#2b3a55" />
           <rect width="4" height="1.6" fill="#c9d3e6" />
         </pattern>
-        <pattern id={dots} width="5" height="5" patternUnits="userSpaceOnUse">
-          <rect width="5" height="5" fill="#2b3a55" />
-          <circle cx="2.5" cy="2.5" r="1" fill="#c9d3e6" />
-        </pattern>
       </defs>
-      {kind === "color" && (
+      {kind === "style" && (
         <>
           <Card x={4} w={36} fill="#d0312d" />
-          <Card x={48} w={36} fill="#2f6fdf" />
-          <Card x={92} w={36} fill="#2e8b57" />
+          <Card x={48} w={36} fill={`url(#${stripes})`} />
+          <Card x={92} w={36} fill="#e0b64a" />
         </>
       )}
       {kind === "variant" && (
@@ -64,9 +59,9 @@ export function SplitVisual({ kind }: { kind: SplitKind }) {
       )}
       {kind === "option" && (
         <>
-          <Card x={4} w={36} fill="#2b3a55" />
-          <Card x={48} w={36} fill={`url(#${stripes})`} />
-          <Card x={92} w={36} fill={`url(#${dots})`} />
+          <Card x={4} w={36} fill="#2b3a55" label="S" />
+          <Card x={48} w={36} fill="#2b3a55" label="M" />
+          <Card x={92} w={36} fill="#2b3a55" label="L" />
         </>
       )}
       {kind === "none" && <Card x={44} w={44} fill="#d0312d" dots={["#d0312d", "#2f6fdf", "#2e8b57"]} />}

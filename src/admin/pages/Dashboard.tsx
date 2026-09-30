@@ -26,7 +26,7 @@ function liveSentence(settings: AppSettings): string {
   if (kind === "none") return t("Cards aren't split right now. Choose what gets its own card below.");
   if (kind === "variant") return t("Shoppers see a card for each variant on your collection pages.");
   if (kind === "option") return t("Shoppers see a card for each {option} on your collection pages.", { option: splitOptionName(settings.split.by)! });
-  return t("Shoppers see a card for each color on your collection pages.");
+  return t("Shoppers see a card for each style on your collection pages.");
 }
 
 /** The first collections, whether they show variant cards (with the changes on this page), and a way in. */
@@ -169,7 +169,7 @@ export function Dashboard() {
     <s-page inlineSize="base">
       <PageHeader
         title={APP_NAME}
-        subtitle={t("Show every color as its own product card on your collection pages.")}
+        subtitle={t("Show your variants as their own product cards on your collection pages.")}
         actions={<Button onClick={preview}>{t("Preview store")}</Button>}
       />
 

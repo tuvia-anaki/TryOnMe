@@ -223,7 +223,7 @@ export function CollectionDetail({ id }: { id: number }) {
   const names = [...new Set([...(optionNames.data ?? []).map((o) => o.name), ...[splitOptionName(shop.split.by), draft.by ? splitOptionName(draft.by) : null].filter((n): n is string => !!n)])];
   const splitOptions: [string, string, string?][] = [
     same(splitSummary(shop.split.enabled, shop.split.by)),
-    ["auto", t("Each color")],
+    ["auto", t("Each style")],
     ["all", t("Each variant")],
     ...names.map((name): [string, string] => [`option:${name}`, t("Each {option}", { option: name })]),
     ["none", t("Don't split")],

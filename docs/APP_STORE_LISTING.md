@@ -5,16 +5,16 @@
 
 **App name:** Variant Cards: Show Variants (28 characters)
 
-**App card subtitle:** Show each color as its own product on collection pages — free for every store
+**App card subtitle:** Show each variant as its own product on collection pages — free for every store
 
 **App introduction (≤100 chars):**
-Every color gets its own card on your collection pages, so shoppers see your whole range at a glance.
+Every color, material or scent gets its own card on your collection pages, so shoppers see your whole range at a glance.
 
 **App details (≤500 chars):**
-Show each variant — usually each color — as its own product card on collection and search pages, with its own image, title, price and link, in your theme's own card design. Choose the collections, hide sold-out variants or ones without a photo, mix colors of different products, and set a manual card order per collection. Works with your theme's filters and sorting. Every feature is free.
+Show each variant — each color, material, scent or any option you pick — as its own product card on collection and search pages, with its own image, title, price and link, in your theme's own card design. Choose the collections, hide sold-out variants or ones without a photo, mix colors of different products, and set a manual card order per collection. Works with your theme's filters and sorting. Every feature is free.
 
 **Feature list (≤80 chars each):**
-- Show each color (or any option) as its own card on collection pages
+- Show each style (color, material, scent…) or any option as its own card on collection pages
 - Works with your theme's cards, filters and sorting — no code
 - Custom titles and price ranges; hide sold-out or image-less variants
 - Per-collection settings with drag-and-drop card order

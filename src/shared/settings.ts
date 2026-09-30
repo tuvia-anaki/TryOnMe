@@ -6,7 +6,8 @@
  */
 
 /**
- * What gets its own card: "auto" = each color (the color option, found in any language),
+ * What gets its own card: "auto" = each style (the color option, found in any language, or
+ * else the option whose values have their own photos, like Material or Scent; never sizes),
  * "all" = each variant, "option:<name>" = each value of the option with that name
  * (e.g. "option:Scent"). Products without that option stay one card.
  */

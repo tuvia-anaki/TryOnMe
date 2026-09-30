@@ -6,7 +6,7 @@ import { navigate } from "../router";
 const CHECKLIST = [
   msg("The app is on in your theme and the theme is saved (Home says “Live”)."),
   msg("The collection shows variant cards (Collections → the collection → “Show variant cards on this collection's page”)."),
-  msg("The products have a color option. Products without one stay as one card, unless you pick another option (Home → What gets its own card)."),
+  msg("The products have variants that look different: a color option, or another option whose variants have their own photos (like Material or Scent). If not, pick the option yourself (Home → What gets its own card)."),
   msg("You're looking at the published theme, or at the theme you picked on Home (use its preview)."),
   msg("Reload the collection page once: product data is cached for 10 minutes while you browse."),
 ];
@@ -26,11 +26,11 @@ const FAQ: [string, string][] = [
   ],
   [
     msg("Why does a page show more cards than the theme's page size?"),
-    msg("Your theme decides how many products fit on a page; each product then becomes one card per color. A page of 24 products with 3 colors each shows 72 cards."),
+    msg("Your theme decides how many products fit on a page; each product then becomes several cards. A page of 24 products with 3 colors each shows 72 cards."),
   ],
   [
     msg("What about SEO?"),
-    msg("Nothing changes for search engines: there are no new pages or product URLs. Variant cards link to the product page with the color selected (?variant=…)."),
+    msg("Nothing changes for search engines: there are no new pages or product URLs. Variant cards link to the product page with that variant selected (?variant=…)."),
   ],
   [
     msg("Will it slow down my store?"),
@@ -53,7 +53,7 @@ export function Help() {
       <div class="vc-stack">
         <Panel title={t("How it works")}>
           <p class="vc-text">
-            {t("{app} takes each product card in your collection and search pages and shows one card per color (or per any option you choose). Each card keeps your theme's design and shows that variant's image, title, price and link.", { app: APP_NAME })}
+            {t("{app} takes each product card in your collection and search pages and shows one card per style: each color, material or scent (or each value of any option you choose). Each card keeps your theme's design and shows that variant's image, title, price and link.", { app: APP_NAME })}
           </p>
         </Panel>
 

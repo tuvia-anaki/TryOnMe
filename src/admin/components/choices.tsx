@@ -1,4 +1,5 @@
 import { splitOptionName, TITLE_PRESETS, type SplitBy } from "../../shared/settings";
+import { isSizeOptionName } from "../../shared/product";
 import { loadOptionNames, type StoreOption } from "../api/collections";
 import { t, tn } from "../i18n";
 import { useAsync } from "../lib/hooks";
@@ -10,27 +11,27 @@ import { SplitVisual, type SplitKind } from "./SplitVisual";
 
 /**
  * The two settings that shape every card, in plain words: what gets its own
- * card (each color / each variant / each value of another option / nothing),
+ * card (each style / each variant / each value of an option / nothing),
  * and the card's title.
  */
 
 export function splitKind(enabled: boolean, by: SplitBy): SplitKind {
   if (!enabled) return "none";
-  return by === "all" ? "variant" : splitOptionName(by) ? "option" : "color";
+  return by === "all" ? "variant" : splitOptionName(by) ? "option" : "style";
 }
 
-/** "Color", "Variant" or the option's name: the word in "Product name - Color". */
+/** "Style", "Variant" or the option's name: the word in "Product name - Style". */
 export function splitWord(by: SplitBy): string {
-  return by === "all" ? t("Variant") : splitOptionName(by) ?? t("Color");
+  return by === "all" ? t("Variant") : splitOptionName(by) ?? t("Style");
 }
 
-/** One line for summaries: "Each color", "Each variant", "Each Scent", "One card per product". */
+/** One line for summaries: "Each style", "Each variant", "Each Scent", "One card per product". */
 export function splitSummary(enabled: boolean, by: SplitBy): string {
   const kind = splitKind(enabled, by);
   if (kind === "none") return t("One card per product");
   if (kind === "variant") return t("Each variant");
   if (kind === "option") return t("Each {option}", { option: splitOptionName(by)! });
-  return t("Each color");
+  return t("Each style");
 }
 
 /** The option names to offer, keeping one that's already chosen even if no product has it now. */
@@ -50,8 +51,12 @@ export function SplitPicker(props: { enabled: boolean; by: SplitBy; labelHidden?
   const choose = (next: SplitKind) => {
     if (next === "none") props.onChange({ enabled: false, by: props.by });
     else if (next === "variant") props.onChange({ enabled: true, by: "all" });
-    else if (next === "color") props.onChange({ enabled: true, by: "auto" });
-    else if (available.length) props.onChange({ enabled: true, by: `option:${current ?? available[0].name}` });
+    else if (next === "style") props.onChange({ enabled: true, by: "auto" });
+    else if (available.length) {
+      // Start with the most common option that isn't a size (sizes rarely deserve their own cards).
+      const first = available.find((o) => !isSizeOptionName(o.name)) ?? available[0];
+      props.onChange({ enabled: true, by: `option:${current ?? first.name}` });
+    }
   };
 
   return (
@@ -62,12 +67,18 @@ export function SplitPicker(props: { enabled: boolean; by: SplitBy; labelHidden?
         value={kind}
         onChange={choose}
         choices={[
-          { value: "color", title: t("Each color"), badge: t("Recommended"), description: t("Red, blue and green become 3 cards. Sizes stay together."), visual: <SplitVisual kind="color" /> },
-          { value: "variant", title: t("Each variant"), description: t("Every color and size gets its own card."), visual: <SplitVisual kind="variant" /> },
+          {
+            value: "style",
+            title: t("Each style"),
+            badge: t("Recommended"),
+            description: t("Colors, materials, scents… each gets its own card. Sizes stay together."),
+            visual: <SplitVisual kind="style" />,
+          },
+          { value: "variant", title: t("Each variant"), description: t("Every variant gets its own card, sizes too."), visual: <SplitVisual kind="variant" /> },
           {
             value: "option",
-            title: t("Another option"),
-            description: noOptions ? t("Your products don't have other options.") : t("Like material or style."),
+            title: t("Pick an option"),
+            description: noOptions ? t("Your products don't have options yet.") : t("Split by one option you choose, like Scent or Size."),
             visual: <SplitVisual kind="option" />,
             disabled: noOptions && kind !== "option",
           },

@@ -88,14 +88,14 @@ export function Settings() {
           <ToggleList>
             <ToggleRow title={t("“Sold out” badge")} checked={s.card.soldOutBadge} onChange={(soldOutBadge) => patch("card", { soldOutBadge })} />
             <ToggleRow
-              title={t("Hide the theme's color swatches")}
-              description={t("They would list every color on a card that shows one.")}
+              title={t("Hide the theme's swatches")}
+              description={t("They would list every variant on a card that shows just one.")}
               checked={s.card.hideThemeSwatches}
               onChange={(hideThemeSwatches) => patch("card", { hideThemeSwatches })}
             />
             <ToggleRow
               title={t("Second photo on hover")}
-              description={t("Often another color's photo, so it's off by default.")}
+              description={t("Often another variant's photo, so it's off by default.")}
               checked={s.card.secondImage}
               onChange={(secondImage) => patch("card", { secondImage })}
             />
