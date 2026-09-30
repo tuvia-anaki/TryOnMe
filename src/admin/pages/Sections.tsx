@@ -33,7 +33,7 @@ export function Sections() {
   const themes = useAsync(() => listThemes(), []);
   const settings = context.data?.settings;
   const theme = themes.data?.find((th) => th.id === settings?.admin.themeId) ?? themes.data?.find((th) => th.role === "MAIN") ?? null;
-  const status = useAsync(() => (theme && context.data ? loadThemeStatus(theme.id, context.data.appHandle) : Promise.resolve(null)), [theme?.id, context.data?.appHandle]);
+  const status = useAsync(() => (theme ? loadThemeStatus(theme.id) : Promise.resolve(null)), [theme?.id]);
   const shopDomain = context.data?.shop.domain ?? window.shopify?.config?.shop ?? "";
   const apiKey = window.shopify?.config?.apiKey ?? "";
 

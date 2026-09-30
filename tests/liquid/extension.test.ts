@@ -28,7 +28,7 @@ function engine(): Liquid {
 }
 
 async function embed(ctx: Record<string, unknown>) {
-  const html = await engine().parseAndRender(read("blocks/app-embed.liquid"), {
+  const html = await engine().parseAndRender(read("blocks/vc-app-embed.liquid"), {
     request: { design_mode: false },
     ...ctx,
   });

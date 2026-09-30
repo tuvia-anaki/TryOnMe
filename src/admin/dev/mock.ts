@@ -7,7 +7,8 @@
 type Json = any;
 
 const STORE_KEY = "vc-mock-store-v1";
-const APP_HANDLE = "variant-cards-dev";
+/** Theme files name the app's blocks "shopify://apps/<name Shopify picks>/blocks/<block>/<extension id>". */
+const APP_SEGMENT = "variant-cards";
 /** Served by the Vite dev middleware (vite.config.ts). */
 const IMG = (file: string, label: string, color: string) => `/mock-img/${encodeURIComponent(file)}.jpg?c=${encodeURIComponent(color)}&l=${encodeURIComponent(label)}`;
 
@@ -170,7 +171,7 @@ function productNode(p: MockProduct) {
  */
 function themeFiles(themeId: number) {
   const embedOn = themeId === 1 && localStorage.getItem("vc-mock-embed") === "on";
-  const embed = { type: `shopify://apps/${APP_HANDLE}/blocks/app-embed/0000`, disabled: !embedOn, settings: {} };
+  const embed = { type: `shopify://apps/${APP_SEGMENT}/blocks/vc-app-embed/0000`, disabled: !embedOn, settings: {} };
   const others = {
     o: { type: "shopify://apps/variants-on-collection/blocks/app-embed/0001", disabled: localStorage.getItem("vc-mock-other-app") !== "on", settings: {} },
     g: { type: "shopify://apps/prism-variant-images/blocks/variant-images-embed/0002", disabled: false, settings: {} },
@@ -179,7 +180,7 @@ function themeFiles(themeId: number) {
   const index = {
     sections: {
       hero: { type: "image-banner", blocks: {} },
-      apps: themeId === 1 ? { type: "apps", blocks: { b: { type: `shopify://apps/${APP_HANDLE}/blocks/best-sellers/0000`, settings: {} } } } : { type: "apps", blocks: {} },
+      apps: themeId === 1 ? { type: "apps", blocks: { b: { type: `shopify://apps/${APP_SEGMENT}/blocks/vc-best-sellers/0000`, settings: {} } } } : { type: "apps", blocks: {} },
     },
   };
   return [
@@ -195,7 +196,7 @@ function handle(query: string, variables: Json): Json {
   switch (op) {
     case "AppContext":
       return {
-        currentAppInstallation: { id: "gid://shopify/AppInstallation/1", app: { handle: APP_HANDLE }, settings: store.appSettings ? { value: store.appSettings, updatedAt: "" } : null },
+        currentAppInstallation: { id: "gid://shopify/AppInstallation/1", settings: store.appSettings ? { value: store.appSettings, updatedAt: "" } : null },
         shop: { name: "Demo store", myshopifyDomain: "demo-store.myshopify.com", primaryDomain: { url: "https://demo-store.myshopify.com" } },
       };
     case "SaveSettings": {

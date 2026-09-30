@@ -91,10 +91,9 @@ export function Dashboard() {
   const [previewHandle, setPreviewHandle] = useState("all");
 
   const settings: AppSettings | null = draft;
-  const appHandle = context.data?.appHandle ?? "";
   const main = themes.data?.find((th) => th.role === "MAIN") ?? themes.data?.[0] ?? null;
   const theme = themes.data?.find((th) => th.id === settings?.admin.themeId) ?? main;
-  const status = useAsync(() => (theme && appHandle ? loadThemeStatus(theme.id, appHandle) : Promise.resolve(null)), [theme?.id, appHandle]);
+  const status = useAsync(() => (theme ? loadThemeStatus(theme.id) : Promise.resolve(null)), [theme?.id]);
   const counts = useAsync(() => loadCounts(), []);
   const collections = useAsync(() => listCollections({ pageSize: 25 }), []);
 

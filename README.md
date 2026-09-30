@@ -31,8 +31,8 @@ No database, no stored tokens, no per-shop or per-shopper server work. (Click an
 
 ```
 extensions/variant-cards/    Theme app extension
-  blocks/app-embed.liquid      settings + page context for the script, anti-flash style
-  blocks/*.liquid              sections: featured-collection, best-sellers, hand-picked, related-products, promo-card
+  blocks/vc-app-embed.liquid   settings + page context for the script, anti-flash style
+  blocks/vc-*.liquid           sections: featured-collection, best-sellers, hand-picked, related-products, promo-card
   snippets/vc-card, vc-grid    the sections' card and grid (split into color cards in Liquid)
   assets/                      built scripts (vc-cards.js, vc-sections.js, vc-promo.js) + vc-sections.css
   locales/                     storefront texts (30 languages)

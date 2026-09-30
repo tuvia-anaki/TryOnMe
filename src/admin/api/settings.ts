@@ -10,8 +10,6 @@ import { gql, throwUserErrors, type UserError } from "./graphql";
 
 export interface AppContext {
   installationId: string;
-  /** The app's handle, as it appears in theme files ("shopify://apps/<handle>/blocks/…"). */
-  appHandle: string;
   settings: AppSettings;
   settingsSaved: boolean;
   shop: { name: string; domain: string; url: string | null };
@@ -21,7 +19,6 @@ const CONTEXT_QUERY = `#graphql
 query AppContext {
   currentAppInstallation {
     id
-    app { handle }
     settings: metafield(namespace: "${SETTINGS_NAMESPACE}", key: "${SETTINGS_KEY}") { value updatedAt }
   }
   shop { name myshopifyDomain primaryDomain { url } }
@@ -40,11 +37,10 @@ let cached: Promise<AppContext> | null = null;
 export function loadAppContext(force = false): Promise<AppContext> {
   if (!cached || force) {
     cached = gql<{
-      currentAppInstallation: { id: string; app: { handle: string }; settings: { value: string } | null };
+      currentAppInstallation: { id: string; settings: { value: string } | null };
       shop: { name: string; myshopifyDomain: string; primaryDomain: { url: string } | null };
     }>(CONTEXT_QUERY).then((data) => ({
       installationId: data.currentAppInstallation.id,
-      appHandle: data.currentAppInstallation.app.handle,
       settings: sanitizeSettings(data.currentAppInstallation.settings?.value ?? null),
       settingsSaved: !!data.currentAppInstallation.settings,
       shop: {

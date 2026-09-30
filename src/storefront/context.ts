@@ -1,7 +1,7 @@
 import { learnMoneyPattern, SAMPLE_CENTS, type MoneyPattern } from "../shared/money";
 import { effectiveSettings, sanitizeCollectionSettings, sanitizeSettings, type AppSettings, type EffectiveSettings, type Texts } from "../shared/settings";
 
-/** Everything the app embed prints for the storefront script (see blocks/app-embed.liquid). */
+/** Everything the app embed prints for the storefront script (see blocks/vc-app-embed.liquid). */
 export interface RawContext {
   template: string;
   collection: { handle: string; id: number } | null;

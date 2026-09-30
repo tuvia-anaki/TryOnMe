@@ -2,25 +2,27 @@ import { describe, expect, it } from "vitest";
 import { testedThemeFor } from "../src/shared/themes";
 import { appNameFromHandle, embedStateFromSettings, otherVariantAppsFromSettings, sectionsInFile } from "../src/admin/api/theme";
 
-const APP = "tryon-69";
-const block = (app: string, handle: string, extra: Record<string, unknown> = {}) => ({ type: `shopify://apps/${app}/blocks/${handle}/9827b57a-d8a6-43e3-9ddb-91a8f657d85a`, settings: {}, ...extra });
+// Shopify names the app part after the app (here its earlier name), not the app handle.
+const APP = "prism-variant-images";
+const block = (app: string, handle: string, extra: Record<string, unknown> = {}) => ({ type: `shopify://apps/${app}/blocks/${handle}/01a0ec75-5a60-7969-b17c-4fc09d328c6f`, settings: {}, ...extra });
 
 describe("theme status", () => {
   it("reads the app embed state from settings_data.json", () => {
     const data = (blocks: Record<string, unknown>) => `/* banner */ ${JSON.stringify({ current: { blocks } })}`;
-    expect(embedStateFromSettings(data({ a: block(APP, "app-embed") }), APP)).toBe("enabled");
-    expect(embedStateFromSettings(data({ a: block(APP, "app-embed", { disabled: true }) }), APP)).toBe("disabled");
-    expect(embedStateFromSettings(data({}), APP)).toBe("missing");
-    // Another app's embed with the same block name doesn't count.
-    expect(embedStateFromSettings(data({ a: block("other-app", "app-embed") }), APP)).toBe("missing");
-    expect(embedStateFromSettings("not json", APP)).toBe("missing");
+    expect(embedStateFromSettings(data({ a: block(APP, "vc-app-embed") }))).toBe("enabled");
+    expect(embedStateFromSettings(data({ a: block("variant-cards", "vc-app-embed") }))).toBe("enabled");
+    expect(embedStateFromSettings(data({ a: block(APP, "vc-app-embed", { disabled: true }) }))).toBe("disabled");
+    expect(embedStateFromSettings(data({}))).toBe("missing");
+    // Other apps' embeds (often simply called "app-embed") don't count.
+    expect(embedStateFromSettings(data({ a: block("other-app", "app-embed") }))).toBe("missing");
+    expect(embedStateFromSettings("not json")).toBe("missing");
   });
 
   it("finds other variant apps that are on in the theme", () => {
     const data = JSON.stringify({
       current: {
         blocks: {
-          a: block(APP, "app-embed"),
+          a: block("variant-cards", "vc-app-embed"),
           b: block("variants-on-collection", "app-embed"),
           c: block("color-swatch-king", "swatches", { disabled: true }),
           d: block("prism-variant-images", "variant-images-embed"),
@@ -28,8 +30,9 @@ describe("theme status", () => {
         },
       },
     });
-    expect(otherVariantAppsFromSettings(data, APP)).toEqual(["variants-on-collection"]);
-    expect(otherVariantAppsFromSettings("not json", APP)).toEqual([]);
+    // This app itself ("variant-cards") isn't another variant app.
+    expect(otherVariantAppsFromSettings(data)).toEqual(["variants-on-collection"]);
+    expect(otherVariantAppsFromSettings("not json")).toEqual([]);
     expect(appNameFromHandle("variants-on-collection")).toBe("Variants on collection");
     expect(appNameFromHandle("tryon-69")).toBe("Tryon");
   });
@@ -38,11 +41,11 @@ describe("theme status", () => {
     const template = JSON.stringify({
       sections: {
         hero: { type: "image-banner", blocks: {} },
-        apps: { type: "apps", blocks: { x: block(APP, "best-sellers"), y: block(APP, "promo-card", { disabled: true }), z: block("other-app", "hand-picked") } },
-        off: { type: "apps", disabled: true, blocks: { w: block(APP, "featured-collection") } },
+        apps: { type: "apps", blocks: { x: block(APP, "vc-best-sellers"), y: block(APP, "vc-promo-card", { disabled: true }), z: block("other-app", "hand-picked") } },
+        off: { type: "apps", disabled: true, blocks: { w: block(APP, "vc-featured-collection") } },
       },
     });
-    expect(sectionsInFile(template, APP)).toEqual(["best-sellers"]);
+    expect(sectionsInFile(template)).toEqual(["best-sellers"]);
   });
 
   it("recognizes tested themes, also renamed copies", () => {
