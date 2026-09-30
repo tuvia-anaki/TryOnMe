@@ -91,7 +91,8 @@
         <s class="vc-card__price-was">{{ compare | money }}</s>
       {%- elsif is_variant == false and product.price_varies -%}
         {%- assign from_price = product.price_min | money -%}
-        {{ 'texts.from' | t | replace: '{price}', from_price }}
+        {%- assign price_token = '{price}' -%}
+        {{ 'texts.from' | t | replace: price_token, from_price }}
       {%- else -%}
         {{ price | money }}
       {%- endif -%}
