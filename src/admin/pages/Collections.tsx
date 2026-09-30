@@ -14,11 +14,9 @@ export function collectionIsOn(row: Pick<CollectionRow, "handle" | "settings">, 
   return settings.collections.mode === "all" || settings.collections.handles.includes(row.handle);
 }
 
-/** Has the collection its own order, hidden cards or settings? */
+/** Has the collection its own card order or hidden cards? */
 function isCustomized(row: CollectionRow): boolean {
-  const s = row.settings;
-  if (!s) return false;
-  return s.order.length > 0 || s.hidden.length > 0 || Object.entries(s).some(([k, v]) => !["v", "order", "hidden", "enabled"].includes(k) && v !== null);
+  return !!row.settings && (row.settings.order.length > 0 || row.settings.hidden.length > 0);
 }
 
 export function Collections() {
@@ -34,7 +32,7 @@ export function Collections() {
     <s-page inlineSize="base">
       <PageHeader
         title={t("Collections")}
-        subtitle={t("Open a collection to choose the order of its cards, hide some, or give it its own settings.")}
+        subtitle={t("Open a collection to change the order of its cards or hide some.")}
         back={{ label: t("Home"), to: "/" }}
       />
       <div class="vc-stack">
@@ -68,7 +66,7 @@ export function Collections() {
                     tags={
                       settings && (
                         <>
-                          {isCustomized(row) && <Tag tone="info">{t("Custom settings")}</Tag>}
+                          {isCustomized(row) && <Tag tone="info">{t("Custom order")}</Tag>}
                           <Tag tone={on ? "success" : undefined} dot>
                             {on ? t("On") : t("Off")}
                           </Tag>

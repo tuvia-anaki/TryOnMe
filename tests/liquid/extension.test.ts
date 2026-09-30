@@ -61,12 +61,13 @@ describe("app embed", () => {
     expect((await embed({ app: app(null), template: { name: "product" } })).html).not.toContain("vc-cards.js");
   });
 
-  it("skips the anti-flash style when splitting is off and prints collection overrides", async () => {
+  it("skips the anti-flash style when splitting is off and prints the collection's own settings", async () => {
+    // An older version's override ("split": true) no longer turns splitting back on.
     const { html, config } = await embed({ app: app({ split: { enabled: false } }), template: { name: "collection" }, collection: collection("summer", { split: true, order: ["1:Red"] }) });
-    expect(html).toContain('id="vc-prehide"'); // the collection turns splitting back on
+    expect(html).not.toContain('id="vc-prehide"');
     expect(config.collectionSettings).toEqual({ split: true, order: ["1:Red"] });
-    const off = await embed({ app: app({ split: { enabled: false } }), template: { name: "collection" }, collection: collection("summer") });
-    expect(off.html).not.toContain('id="vc-prehide"');
+    const on = await embed({ app: app({}), template: { name: "collection" }, collection: collection("summer") });
+    expect(on.html).toContain('id="vc-prehide"');
   });
 
   it("keeps the settings JSON inside its script tag", async () => {

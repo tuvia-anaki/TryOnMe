@@ -1,9 +1,10 @@
 import { findMoney, type MoneyPattern } from "../shared/money";
 import { arrangeCards, productCards, type VariantCard, type VcProduct } from "../shared/split";
-import { findGrids, loadProduct, mainScope, type Grid, type ThemeCard } from "./cards";
+import { findGrids, loadProduct, mainScope, UI_ATTR, type Grid, type ThemeCard } from "./cards";
 import type { PageContext } from "./context";
 import { copyCard, DONE_ATTR, HIDDEN_ATTR, renderCard, type RenderContext } from "./patch";
 import { revealWhenVisible } from "./reveal";
+import { renderSwatches, swatchSet } from "./swatches";
 
 export interface RenderedCard {
   el: Element;
@@ -164,10 +165,28 @@ export class Engine {
     }
     // Products that are hidden entirely in this collection.
     for (const m of managed) if (!used.has(m.source.el)) m.source.el.setAttribute(HIDDEN_ATTR, "");
+    if (this.ctx.settings.swatches.enabled) for (const { el, card } of rendered) this.addSwatches(el, card);
     for (const decorate of this.decorators) decorate(rendered, grid.parent);
     grid.parent.setAttribute("data-vc-grid", "");
     document.dispatchEvent(new CustomEvent("vc:render", { detail: { grid: grid.parent, cards: rendered.map((r) => ({ element: r.el, key: r.card.key, variantId: r.card.variant.id })) } }));
     return rendered;
+  }
+
+  /** Swatches under a card; picking one draws the same card again for that variant. */
+  private addSwatches(el: Element, card: VariantCard): void {
+    if (el.querySelector(`[${UI_ATTR}='swatches']`)) return;
+    const set = swatchSet(card, this.ctx.effective);
+    if (!set) return;
+    // One card per product: picking a color changes the photo, price and link, not the product's name.
+    const render = card.split ? this.render : { ...this.render, effective: { ...this.render.effective, title: "{product}" } };
+    const url = `${this.ctx.root}products/${encodeURIComponent(card.product.handle)}`;
+    let showing = card.key;
+    const row = renderSwatches(el, set, url, (swatch) => {
+      if (swatch.card.key === showing) return;
+      showing = swatch.card.key;
+      renderCard(el, swatch.card, render);
+      row.select(swatch.value);
+    });
   }
 
   /**
@@ -201,7 +220,8 @@ export class Engine {
     if (this.observer) return;
     let timer: number | undefined;
     this.observer = new MutationObserver((mutations) => {
-      const added = mutations.some((m) => Array.from(m.addedNodes).some((n) => n instanceof Element && !n.hasAttribute(DONE_ATTR)));
+      // New cards, not the app's own additions (swatches, badges).
+      const added = mutations.some((m) => Array.from(m.addedNodes).some((n) => n instanceof Element && !n.hasAttribute(DONE_ATTR) && !n.hasAttribute(UI_ATTR)));
       if (!added) return;
       window.clearTimeout(timer);
       timer = window.setTimeout(() => void this.run(), 120);

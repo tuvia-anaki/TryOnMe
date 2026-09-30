@@ -1,6 +1,6 @@
 {%- comment -%}
   Variant Cards app embed. Prints the shop's settings (app-data metafield),
-  this collection's overrides (app-owned collection metafield) and price
+  this collection's own settings (app-owned collection metafield) and price
   samples for the storefront script, and hides the product grid until its
   cards are split (no flash of the original cards). No app server involved.
 {%- endcomment -%}
@@ -53,11 +53,6 @@
   assign vc_split = true
   if vc.split.enabled == false
     assign vc_split = false
-  endif
-  if vc_collection_settings.split == false
-    assign vc_split = false
-  elsif vc_collection_settings.split == true
-    assign vc_split = true
   endif
   assign vc_prehide = false
   if vc_active and vc_split and request.design_mode == false

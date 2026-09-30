@@ -2,7 +2,7 @@
  * Shop-wide settings, stored as JSON in an app-data metafield on the app
  * installation. The theme app extension reads them in Liquid
  * (`app.metafields.variant_cards.settings`), so no app server is involved.
- * Per-collection overrides live on each collection (CollectionSettings).
+ * Each collection can turn cards off and order or hide them (CollectionSettings).
  */
 
 /**
@@ -34,13 +34,9 @@ export interface AppSettings {
   price: { format: PriceFormat };
   hide: { soldOut: boolean; noImage: boolean };
   order: { mix: boolean; soldOutLast: boolean };
-  card: {
-    /** Hide the theme's own color swatches on split cards (they'd list every color). */
-    hideThemeSwatches: boolean;
-    /** Keep the theme's hover (second) image on split cards. */
-    secondImage: boolean;
-    soldOutBadge: boolean;
-  };
+  card: { soldOutBadge: boolean };
+  /** Swatches under each card: shoppers pick a color (or style) right on the card. */
+  swatches: { enabled: boolean };
   advanced: {
     /** Hide the product grid until cards are split, to avoid a flash of the original cards. */
     preventFlash: boolean;
@@ -57,15 +53,8 @@ export interface AppSettings {
 
 export interface CollectionSettings {
   v: 1;
-  /** null = use the shop-wide setting. */
+  /** false = no variant cards on this collection's page; null = like the shop settings. */
   enabled: boolean | null;
-  split: boolean | null;
-  by: SplitBy | null;
-  title: string | null;
-  price: PriceFormat | null;
-  hideSoldOut: boolean | null;
-  hideNoImage: boolean | null;
-  mix: boolean | null;
   /** Card keys ("<productId>" or "<productId>:<value>") shown first, in this order. */
   order: string[];
   /** Card keys never shown in this collection. */
@@ -83,24 +72,13 @@ export const DEFAULT_SETTINGS: AppSettings = {
   price: { format: "theme" },
   hide: { soldOut: false, noImage: false },
   order: { mix: false, soldOutLast: false },
-  card: { hideThemeSwatches: true, secondImage: false, soldOutBadge: true },
+  card: { soldOutBadge: true },
+  swatches: { enabled: false },
   advanced: { preventFlash: true, gridSelector: "", cardSelector: "", customCss: "" },
   admin: { settingsSaved: false, previewed: false },
 };
 
-export const EMPTY_COLLECTION_SETTINGS: CollectionSettings = {
-  v: 1,
-  enabled: null,
-  split: null,
-  by: null,
-  title: null,
-  price: null,
-  hideSoldOut: null,
-  hideNoImage: null,
-  mix: null,
-  order: [],
-  hidden: [],
-};
+export const EMPTY_COLLECTION_SETTINGS: CollectionSettings = { v: 1, enabled: null, order: [], hidden: [] };
 
 /* ------------------------------------------------------------------ */
 /* Validation                                                          */
@@ -162,6 +140,7 @@ export function sanitizeSettings(raw: unknown): AppSettings {
   const h = src.hide ?? {};
   const o = src.order ?? {};
   const cd = src.card ?? {};
+  const sw = src.swatches ?? {};
   const a = src.advanced ?? {};
   const ad = src.admin ?? {};
   return {
@@ -181,11 +160,8 @@ export function sanitizeSettings(raw: unknown): AppSettings {
     price: { format: oneOf(src.price?.format, PRICE_FORMATS, d.price.format) },
     hide: { soldOut: bool(h.soldOut, d.hide.soldOut), noImage: bool(h.noImage, d.hide.noImage) },
     order: { mix: bool(o.mix, d.order.mix), soldOutLast: bool(o.soldOutLast, d.order.soldOutLast) },
-    card: {
-      hideThemeSwatches: bool(cd.hideThemeSwatches, d.card.hideThemeSwatches),
-      secondImage: bool(cd.secondImage, d.card.secondImage),
-      soldOutBadge: bool(cd.soldOutBadge, d.card.soldOutBadge),
-    },
+    card: { soldOutBadge: bool(cd.soldOutBadge, d.card.soldOutBadge) },
+    swatches: { enabled: bool(sw.enabled, d.swatches.enabled) },
     advanced: {
       preventFlash: bool(a.preventFlash, d.advanced.preventFlash),
       gridSelector: selector(a.gridSelector),
@@ -202,30 +178,18 @@ export function sanitizeSettings(raw: unknown): AppSettings {
 
 const nullableBool = (v: unknown): boolean | null => (typeof v === "boolean" ? v : null);
 
+/** A collection's settings. (Older versions also stored other overrides there; they're dropped.) */
 export function sanitizeCollectionSettings(raw: unknown): CollectionSettings {
   const src = parse(raw);
-  return {
-    v: 1,
-    enabled: nullableBool(src.enabled),
-    split: nullableBool(src.split),
-    by: splitBy(src.by),
-    title: typeof src.title === "string" && src.title.trim() ? plain(src.title, "", 120) : null,
-    price: typeof src.price === "string" && (PRICE_FORMATS as readonly string[]).includes(src.price) ? (src.price as PriceFormat) : null,
-    hideSoldOut: nullableBool(src.hideSoldOut),
-    hideNoImage: nullableBool(src.hideNoImage),
-    mix: nullableBool(src.mix),
-    order: keyList(src.order, 1000),
-    hidden: keyList(src.hidden, 1000),
-  };
+  return { v: 1, enabled: nullableBool(src.enabled), order: keyList(src.order, 1000), hidden: keyList(src.hidden, 1000) };
 }
 
-/** True when a collection has no overrides at all (its metafield can be deleted). */
+/** True when a collection has nothing of its own (its metafield can be deleted). */
 export function isDefaultCollectionSettings(settings: CollectionSettings): boolean {
-  const { v: _v, order, hidden, ...rest } = settings;
-  return !order.length && !hidden.length && Object.values(rest).every((value) => value === null);
+  return settings.enabled === null && !settings.order.length && !settings.hidden.length;
 }
 
-/** What actually applies on a collection page: collection overrides over the shop settings. */
+/** What applies on a page: the shop settings, with the collection's own on/off, order and hidden cards. */
 export interface EffectiveSettings {
   enabled: boolean;
   split: boolean;
@@ -244,13 +208,13 @@ export function effectiveSettings(shop: AppSettings, collection: CollectionSetti
   const c = collection ?? EMPTY_COLLECTION_SETTINGS;
   return {
     enabled: c.enabled ?? true,
-    split: c.split ?? shop.split.enabled,
-    by: c.by ?? shop.split.by,
-    title: c.title ?? shop.split.title,
-    price: c.price ?? shop.price.format,
-    hideSoldOut: c.hideSoldOut ?? shop.hide.soldOut,
-    hideNoImage: c.hideNoImage ?? shop.hide.noImage,
-    mix: c.mix ?? shop.order.mix,
+    split: shop.split.enabled,
+    by: shop.split.by,
+    title: shop.split.title,
+    price: shop.price.format,
+    hideSoldOut: shop.hide.soldOut,
+    hideNoImage: shop.hide.noImage,
+    mix: shop.order.mix,
     soldOutLast: shop.order.soldOutLast,
     order: c.order,
     hidden: c.hidden,

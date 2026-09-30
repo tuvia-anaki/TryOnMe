@@ -1,34 +1,14 @@
 import { useEffect, useMemo, useState } from "preact/hooks";
-import {
-  EMPTY_COLLECTION_SETTINGS,
-  TITLE_PRESETS,
-  effectiveSettings,
-  isDefaultCollectionSettings,
-  splitOptionName,
-  type AppSettings,
-  type CollectionSettings,
-  type PriceFormat,
-  type SplitBy,
-} from "../../shared/settings";
+import { EMPTY_COLLECTION_SETTINGS, effectiveSettings, type AppSettings, type CollectionSettings } from "../../shared/settings";
 import { arrangeCards, formatTitle, productCards, type VariantCard } from "../../shared/split";
-import { loadCollection, loadCollectionProducts, loadOptionNames, saveCollectionSettings } from "../api/collections";
+import { loadCollection, loadCollectionProducts, saveCollectionSettings } from "../api/collections";
 import { loadAppContext, saveSettings } from "../api/settings";
-import { splitSummary, titleChoices } from "../components/choices";
 import { ErrorBanner, Loading, openExternal } from "../components/common";
-import { Disclosure } from "../components/Disclosure";
-import { Select, Text } from "../components/fields";
 import { Button, PageHeader, Panel, ToggleRow } from "../components/ui";
 import { formatNumber, t, tn } from "../i18n";
 import { toast, useAsync, useSaveBar } from "../lib/hooks";
 import { navigate } from "../router";
 import { collectionIsOn } from "./Collections";
-import { orderChoices, priceChoices } from "./Settings";
-
-const INHERIT = "inherit";
-const CUSTOM = "__custom__";
-
-/** "Same as your settings", with what that currently means underneath. */
-const same = (current: string): [typeof INHERIT, string, string] => [INHERIT, t("Same as your settings"), current];
 
 function money(cents: number): string {
   try {
@@ -111,7 +91,6 @@ export function CollectionDetail({ id }: { id: number }) {
   const collection = useAsync(() => loadCollection(id), [id]);
   const [progress, setProgress] = useState(0);
   const products = useAsync(() => loadCollectionProducts(id, 200, setProgress), [id]);
-  const optionNames = useAsync(() => loadOptionNames(), []);
   const [draft, setDraft] = useState<CollectionSettings>(EMPTY_COLLECTION_SETTINGS);
   const [saved, setSaved] = useState<CollectionSettings>(EMPTY_COLLECTION_SETTINGS);
   const [shop, setShop] = useState<AppSettings | null>(null);
@@ -216,31 +195,6 @@ export function CollectionDetail({ id }: { id: number }) {
   };
   const hidden = new Set(draft.hidden);
   const storeUrl = context.data?.shop.url ?? `https://${context.data?.shop.domain}`;
-  const overrides = !isDefaultCollectionSettings({ ...draft, order: [], hidden: [], enabled: null });
-
-  // What gets its own card: one list with every choice, including each option name in the store.
-  const splitValue = draft.split === false ? "none" : (draft.by ?? (draft.split === true ? shop.split.by : INHERIT));
-  const names = [...new Set([...(optionNames.data ?? []).map((o) => o.name), ...[splitOptionName(shop.split.by), draft.by ? splitOptionName(draft.by) : null].filter((n): n is string => !!n)])];
-  const splitOptions: [string, string, string?][] = [
-    same(splitSummary(shop.split.enabled, shop.split.by)),
-    ["auto", t("Each style")],
-    ["all", t("Each variant")],
-    ...names.map((name): [string, string] => [`option:${name}`, t("Each {option}", { option: name })]),
-    ["none", t("Don't split")],
-  ];
-  const setSplit = (v: string) =>
-    setDraft({ ...draft, split: v === INHERIT ? null : v !== "none", by: v === INHERIT || v === "none" ? null : (v as SplitBy) });
-
-  const titleBy = effective?.by ?? shop.split.by;
-  const titleExample = optionNames.data?.find((o) => o.name.toLowerCase() === (splitOptionName(titleBy) ?? "").toLowerCase())?.example;
-  const titleValue = draft.title === null ? INHERIT : (TITLE_PRESETS as readonly string[]).includes(draft.title) ? draft.title : CUSTOM;
-  const titleOptions: [string, string, string?][] = [
-    same(titleChoices(titleBy, titleExample).find((o) => o.value === shop.split.title)?.label ?? shop.split.title),
-    ...titleChoices(titleBy, titleExample).map((o): [string, string, string?] => [o.value, o.label, o.description]),
-    [CUSTOM, t("Custom"), t("Write your own")],
-  ];
-  const showHide = (value: boolean | null) => (value === null ? INHERIT : value ? "hide" : "show");
-  const fromShowHide = (value: string) => (value === INHERIT ? null : value === "hide");
 
   const move = (from: number, to: number) => {
     const keys = cards.map((c) => c.key);
@@ -269,52 +223,7 @@ export function CollectionDetail({ id }: { id: number }) {
           />
         </Panel>
 
-        <Disclosure title={t("Different settings for this collection")} summary={overrides ? t("Some settings are changed") : t("Same as your settings")} defaultOpen={overrides}>
-          <div class="vc-columns">
-            <Select<string> showDescription label={t("What gets its own card")} value={splitValue} options={splitOptions} onChange={setSplit} />
-            <Select<string>
-              showDescription
-              label={t("Card title")}
-              value={titleValue}
-              options={titleOptions}
-              disabled={!(effective?.split ?? true)}
-              onChange={(v) => setDraft({ ...draft, title: v === INHERIT ? null : v === CUSTOM ? "{product} · {value}" : v })}
-            />
-            <Select<string>
-              showDescription
-              label={t("Price")}
-              value={draft.price ?? INHERIT}
-              options={[same(priceChoices().find(([v]) => v === shop.price.format)![1]), ...priceChoices()]}
-              onChange={(v) => setDraft({ ...draft, price: v === INHERIT ? null : (v as PriceFormat) })}
-            />
-            <Select<string>
-              showDescription
-              label={t("Card order")}
-              value={draft.mix === null ? INHERIT : draft.mix ? "mix" : "together"}
-              options={[same(orderChoices().find(([v]) => v === (shop.order.mix ? "mix" : "together"))![1]), ...orderChoices()]}
-              onChange={(v) => setDraft({ ...draft, mix: v === INHERIT ? null : v === "mix" })}
-            />
-            <Select<string>
-              showDescription
-              label={t("Sold-out cards")}
-              value={showHide(draft.hideSoldOut)}
-              options={[same(shop.hide.soldOut ? t("Hide") : t("Show")), ["show", t("Show")], ["hide", t("Hide")]]}
-              onChange={(v) => setDraft({ ...draft, hideSoldOut: fromShowHide(v) })}
-            />
-            <Select<string>
-              showDescription
-              label={t("Cards without their own photo")}
-              value={showHide(draft.hideNoImage)}
-              options={[same(shop.hide.noImage ? t("Hide") : t("Show")), ["show", t("Show")], ["hide", t("Hide")]]}
-              onChange={(v) => setDraft({ ...draft, hideNoImage: fromShowHide(v) })}
-            />
-          </div>
-          {draft.title !== null && !(TITLE_PRESETS as readonly string[]).includes(draft.title) && (
-            <Text label={t("Custom title")} value={draft.title} onChange={(title) => setDraft({ ...draft, title: title || null })} />
-          )}
-        </Disclosure>
-
-        <Panel title={t("Card order")} description={t("Drag cards to change the order shoppers see. Hidden cards don't show in this collection.")}>
+        <Panel title={t("Card order")} description={t("Drag cards to change the order shoppers see, or point at a card to hide it.")}>
           {products.error ? (
             <ErrorBanner error={products.error} onRetry={products.reload} />
           ) : products.loading ? (

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { sanitizeCollectionSettings, sanitizeSettings, splitOptionName } from "../../src/shared/settings";
+import { effectiveSettings, isDefaultCollectionSettings, sanitizeCollectionSettings, sanitizeSettings, splitOptionName } from "../../src/shared/settings";
 
 describe("settings", () => {
   it("reads what gets its own card", () => {
@@ -13,9 +13,22 @@ describe("settings", () => {
     expect(by("option2")).toBe("auto");
     expect(by("combined")).toBe("auto");
     expect(by(42)).toBe("auto");
-    expect(sanitizeCollectionSettings({ by: "option:Material" }).by).toBe("option:Material");
-    expect(sanitizeCollectionSettings({ by: "nonsense" }).by).toBeNull();
     expect(splitOptionName("option:Scent")).toBe("Scent");
     expect(splitOptionName("auto")).toBeNull();
+  });
+
+  it("keeps a collection's on/off, order and hidden cards, and drops older overrides", () => {
+    const stored = { enabled: false, by: "option:Material", title: "{value}", price: "range", mix: true, order: ["1:Red", "2"], hidden: ["3:Blue", "<x>"] };
+    expect(sanitizeCollectionSettings(stored)).toEqual({ v: 1, enabled: false, order: ["1:Red", "2"], hidden: ["3:Blue"] });
+    const shop = sanitizeSettings({ split: { by: "all", title: "{product} / {value}" }, price: { format: "from" } });
+    const e = effectiveSettings(shop, sanitizeCollectionSettings(stored));
+    expect(e).toMatchObject({ enabled: false, by: "all", title: "{product} / {value}", price: "from", mix: false, order: ["1:Red", "2"] });
+    expect(isDefaultCollectionSettings(sanitizeCollectionSettings({ by: "all" }))).toBe(true);
+  });
+
+  it("swatches are off until turned on; removed options are dropped", () => {
+    expect(sanitizeSettings({}).swatches).toEqual({ enabled: false });
+    expect(sanitizeSettings({ swatches: { enabled: true } }).swatches.enabled).toBe(true);
+    expect(sanitizeSettings({ card: { secondImage: true, hideThemeSwatches: false, soldOutBadge: false } }).card).toEqual({ soldOutBadge: false });
   });
 });

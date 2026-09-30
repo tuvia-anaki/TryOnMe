@@ -97,7 +97,9 @@ for (const arg of themes) {
   const host = DEMOS[theme];
   if (!host) continue;
   events.length = 0;
-  await send("Page.navigate", { url: `http://localhost:4600/__demo/${host}?to=${encodeURIComponent(path)}` });
+  // VC_SETTINGS='{"swatches":{"enabled":true}}' checks with those app settings.
+  const settings = process.env.VC_SETTINGS ? `&settings=${encodeURIComponent(process.env.VC_SETTINGS)}` : "";
+  await send("Page.navigate", { url: `http://localhost:4600/__demo/${host}?to=${encodeURIComponent(path)}${settings}` });
   // Wait for the collection page's load event, then give the theme and the app time to run.
   const start = Date.now();
   while (Date.now() - start < 30000 && !events.some((e) => e.method === "Page.loadEventFired" && Date.now() - start > 1500)) await sleep(250);
@@ -119,7 +121,8 @@ for (const arg of themes) {
   }
   const appErrors = errors.filter((e) => /vc-cards|Variant Cards/i.test(e ?? ""));
   results.push({ theme: arg, ...value, appErrors });
-  console.log(`${arg.padEnd(11)} cards ${String(value.cards ?? "?").padStart(3)} split ${String(value.split ?? "?").padStart(3)} issues ${String(value.issueCount ?? "?").padStart(3)}${appErrors.length ? `  APP ERRORS: ${appErrors.join(" | ")}` : ""}`);
+  const swatched = value.swatched ? ` swatches ${String(value.swatched).padStart(2)}` : "";
+  console.log(`${arg.padEnd(11)} cards ${String(value.cards ?? "?").padStart(3)} split ${String(value.split ?? "?").padStart(3)}${swatched} issues ${String(value.issueCount ?? "?").padStart(3)}${appErrors.length ? `  APP ERRORS: ${appErrors.join(" | ")}` : ""}`);
   for (const issue of value.issues ?? []) console.log(`      ${issue}`);
   if (EXPR) console.log(JSON.stringify(value, null, 1));
 }

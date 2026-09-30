@@ -1,20 +1,17 @@
 import { useRef, useState } from "preact/hooks";
 import { APP_NAME } from "../../shared/brand";
 import { splitOptionName, type AppSettings } from "../../shared/settings";
-import { listCollections } from "../api/collections";
 import { appEmbedsUrl, appNameFromHandle, enableEmbedUrl, listThemes, loadThemeStatus, preferredTheme, setPreferredTheme, type ThemeInfo } from "../api/theme";
 import { ChoiceCards } from "../components/ChoiceCards";
 import { CollectionPicker } from "../components/CollectionPicker";
-import { splitKind, SplitPicker, TitlePicker } from "../components/choices";
+import { splitKind, SplitPicker } from "../components/choices";
 import { ErrorBanner, Loading, openExternal } from "../components/common";
 import { Dropdown } from "../components/Dropdown";
 import { LanguagePicker } from "../components/LanguagePicker";
-import { Button, LinkCard, LinkRow, PageHeader, Panel, StatusCard, Tag, ToggleList, ToggleRow } from "../components/ui";
-import { formatNumber, t, tn } from "../i18n";
+import { Button, LinkCard, PageHeader, Panel, StatusCard, Tag } from "../components/ui";
+import { t } from "../i18n";
 import { useSettingsDraft } from "../lib/draft";
 import { useAsync } from "../lib/hooks";
-import { navigate } from "../router";
-import { collectionIsOn } from "./Collections";
 
 function themeLabel(theme: ThemeInfo): string {
   return theme.role === "MAIN" ? t("{name} (published)", { name: theme.name }) : theme.name;
@@ -23,39 +20,14 @@ function themeLabel(theme: ThemeInfo): string {
 /** What shoppers see now, in one sentence. */
 function liveSentence(settings: AppSettings): string {
   const kind = splitKind(settings.split.enabled, settings.split.by);
-  if (kind === "none") return t("Cards aren't split right now. Choose what gets its own card below.");
+  if (kind === "none") {
+    return settings.swatches.enabled
+      ? t("Shoppers see one card per product and pick colors with swatches.")
+      : t("Cards aren't split right now. Choose what gets its own card below.");
+  }
   if (kind === "variant") return t("Shoppers see a card for each variant on your collection pages.");
   if (kind === "option") return t("Shoppers see a card for each {option} on your collection pages.", { option: splitOptionName(settings.split.by)! });
   return t("Shoppers see a card for each style on your collection pages.");
-}
-
-/** The first collections, whether they show variant cards (with the changes on this page), and a way in. */
-function CollectionsPreview({ settings }: { settings: AppSettings }) {
-  const page = useAsync(() => listCollections({ pageSize: 5 }), []);
-  if (page.error) return <ErrorBanner error={page.error} onRetry={page.reload} />;
-  if (!page.data) return <p class="vc-muted">{t("Loading…")}</p>;
-  if (!page.data.rows.length) return <p class="vc-muted">{t("Your store has no collections yet.")}</p>;
-  return (
-    <div class="vc-link-rows">
-      {page.data.rows.map((row) => {
-        const on = collectionIsOn(row, settings);
-        return (
-          <LinkRow
-            key={row.id}
-            to={`/collections/${row.id}`}
-            media={<s-thumbnail size="small" src={row.image ?? undefined} alt="" />}
-            title={row.title}
-            meta={tn(row.productsCount, "{count} product", "{count} products", { count: formatNumber(row.productsCount) })}
-            tags={
-              <Tag tone={on ? "success" : undefined} dot>
-                {on ? t("On") : t("Off")}
-              </Tag>
-            }
-          />
-        );
-      })}
-    </div>
-  );
 }
 
 export function Dashboard() {
@@ -63,14 +35,24 @@ export function Dashboard() {
   const { context, draft, saved, patch, update, saving } = useSettingsDraft("vc-home-save-bar");
   const themes = useAsync(() => listThemes(), []);
   const [themeId, setThemeId] = useState("");
+  const [pickTheme, setPickTheme] = useState(false);
   const theme = themes.data?.find((th) => th.id === themeId) ?? preferredTheme(themes.data);
   const status = useAsync(() => (theme ? loadThemeStatus(theme.id).then((st) => ({ ...st, themeId: theme.id })) : Promise.resolve(null)), [theme?.id]);
   const confirmRef = useRef<any>(null);
+  // The language picker comes first, top right; then the page title.
+  const header = (
+    <>
+      <div class="vc-topbar">
+        <LanguagePicker />
+      </div>
+      <PageHeader title={APP_NAME} subtitle={t("Show your variants as their own product cards on your collection pages.")} />
+    </>
+  );
 
   if (context.error) {
     return (
       <s-page inlineSize="base">
-        <PageHeader title={APP_NAME} />
+        {header}
         <ErrorBanner error={context.error} onRetry={context.reload} />
       </s-page>
     );
@@ -78,7 +60,7 @@ export function Dashboard() {
   if (!draft || !saved) {
     return (
       <s-page inlineSize="base">
-        <PageHeader title={APP_NAME} />
+        {header}
         <Loading />
       </s-page>
     );
@@ -104,18 +86,31 @@ export function Dashboard() {
     openExternal(url.toString());
   };
 
-  const themePicker = themes.data && themes.data.length > 1 && (
-    <div class="vc-inline-field">
-      <Dropdown
-        label={t("Theme")}
-        value={theme?.id ?? ""}
-        options={themes.data.map((th) => ({ value: th.id, label: themeLabel(th) }))}
-        onChange={(id) => {
-          const picked = themes.data!.find((th) => th.id === id);
-          if (picked) setPreferredTheme(picked);
-          setThemeId(id);
-        }}
-      />
+  // Stores keep copies of their theme: which one to check, tucked away until needed.
+  const themeLine = themes.data && themes.data.length > 1 && theme && (
+    <div class="vc-theme-line">
+      {pickTheme ? (
+        <div class="vc-inline-field">
+          <Dropdown
+            label={t("Theme")}
+            value={theme.id}
+            options={themes.data.map((th) => ({ value: th.id, label: themeLabel(th) }))}
+            onChange={(id) => {
+              const picked = themes.data!.find((th) => th.id === id);
+              if (picked) setPreferredTheme(picked);
+              setThemeId(id);
+              setPickTheme(false);
+            }}
+          />
+        </div>
+      ) : (
+        <>
+          <span class="vc-muted">{t("Theme: {name}", { name: themeLabel(theme) })}</span>
+          <button type="button" class="vc-link-button" onClick={() => setPickTheme(true)}>
+            {t("Change")}
+          </button>
+        </>
+      )}
     </div>
   );
 
@@ -139,7 +134,7 @@ export function Dashboard() {
         </>
       }
     >
-      {themePicker}
+      {themeLine}
     </StatusCard>
   ) : !saved.enabled ? (
     <StatusCard
@@ -152,26 +147,29 @@ export function Dashboard() {
         </Button>
       }
     >
-      {themePicker}
+      {themeLine}
     </StatusCard>
   ) : (
     <StatusCard
       tone="live"
       title={t("Live on {theme}", { theme: themeName })}
       description={liveSentence(saved)}
-      actions={<Button onClick={() => confirmRef.current?.showOverlay?.()}>{t("Pause")}</Button>}
+      actions={
+        <>
+          <Button onClick={preview}>{t("Preview store")}</Button>
+          <Button variant="plain" onClick={() => confirmRef.current?.showOverlay?.()}>
+            {t("Pause")}
+          </Button>
+        </>
+      }
     >
-      {themePicker}
+      {themeLine}
     </StatusCard>
   );
 
   return (
     <s-page inlineSize="base">
-      <PageHeader
-        title={APP_NAME}
-        subtitle={t("Show your variants as their own product cards on your collection pages.")}
-        actions={<Button onClick={preview}>{t("Preview store")}</Button>}
-      />
+      {header}
 
       <div class="vc-stack">
         {statusCard}
@@ -192,13 +190,8 @@ export function Dashboard() {
           </s-banner>
         )}
 
-        <Panel title={t("What gets its own card")} description={t("Pick how your products are split into cards.")}>
+        <Panel title={t("What gets its own card")}>
           <SplitPicker labelHidden enabled={s.split.enabled} by={s.split.by} onChange={(split) => patch("split", split)} />
-          {s.split.enabled && (
-            <div class="vc-narrow">
-              <TitlePicker title={s.split.title} by={s.split.by} onChange={(title) => patch("split", { title })} />
-            </div>
-          )}
         </Panel>
 
         <Panel title={t("Where cards show")}>
@@ -214,36 +207,28 @@ export function Dashboard() {
             onChange={(mode) => patch("collections", { mode })}
           />
           {s.collections.mode === "selected" && <CollectionPicker handles={s.collections.handles} onChange={(handles) => patch("collections", { handles })} />}
-          <ToggleList label={t("Also on")}>
-            <ToggleRow title={t("All products page")} checked={s.pages.allProducts} onChange={(allProducts) => patch("pages", { allProducts })} />
-            <ToggleRow title={t("Search results")} checked={s.pages.search} onChange={(search) => patch("pages", { search })} />
-            <ToggleRow title={t("Product grids on the home page")} checked={s.pages.home} onChange={(home) => patch("pages", { home })} />
-          </ToggleList>
         </Panel>
 
-        <Panel
-          title={t("Your collections")}
-          description={t("Open a collection to change the order of its cards or hide some.")}
-          action={
-            <Button variant="plain" onClick={() => void navigate("/collections")}>
-              {t("See all")}
-            </Button>
-          }
-        >
-          <CollectionsPreview settings={s} />
-        </Panel>
-
-        <div class="vc-two">
-          <LinkCard to="/settings" icon="settings" title={t("More settings")} description={t("Sold-out cards, missing photos, prices, badges and advanced options.")} />
+        <div class="vc-link-cards">
+          <LinkCard
+            to="/swatches"
+            icon="swatches"
+            title={t("Swatches")}
+            tag={
+              <Tag tone={saved.swatches.enabled ? "success" : undefined} dot>
+                {saved.swatches.enabled ? t("On") : t("Off")}
+              </Tag>
+            }
+            description={t("Shoppers pick a color or style right on the card.")}
+          />
+          <LinkCard to="/collections" icon="collections" title={t("Collections")} description={t("Change the order of cards in a collection, or hide some.")} />
+          <LinkCard to="/settings" icon="settings" title={t("More settings")} description={t("Card titles, sold-out cards, prices and more.")} />
           <LinkCard to="/help" icon="help" title={t("Help")} description={t("How it works, and what to do if cards don't show.")} />
         </div>
       </div>
 
       <footer class="vc-footer">
         <span class="vc-muted">{t("Free forever. Every feature included.")}</span>
-        <div class="vc-footer__language">
-          <LanguagePicker />
-        </div>
       </footer>
 
       <s-modal id="vc-confirm-pause" heading={t("Pause Variant Cards?")} ref={confirmRef}>

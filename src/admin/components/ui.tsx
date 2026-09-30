@@ -154,6 +154,21 @@ export function LinkRow(props: { to: string; media?: ComponentChildren; title: s
 }
 
 const CARD_ICONS = {
+  swatches: (
+    <>
+      <circle cx="5" cy="10" r="3" fill="none" stroke="currentColor" stroke-width="1.7" />
+      <circle cx="10" cy="10" r="3" fill="currentColor" />
+      <circle cx="15" cy="10" r="3" fill="none" stroke="currentColor" stroke-width="1.7" />
+    </>
+  ),
+  collections: (
+    <>
+      <rect x="3.5" y="3.5" width="5.5" height="5.5" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.7" />
+      <rect x="11" y="3.5" width="5.5" height="5.5" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.7" />
+      <rect x="3.5" y="11" width="5.5" height="5.5" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.7" />
+      <rect x="11" y="11" width="5.5" height="5.5" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.7" />
+    </>
+  ),
   settings: (
     <path
       d="M4 6h7M15 6h1M4 14h1M9 14h7M13 4v4M7 12v4"
@@ -173,14 +188,17 @@ const CARD_ICONS = {
 };
 
 /** A big clickable card that opens another page: an icon, a title and what's there. */
-export function LinkCard(props: { to: string; icon: keyof typeof CARD_ICONS; title: string; description: string }) {
+export function LinkCard(props: { to: string; icon: keyof typeof CARD_ICONS; title: string; tag?: ComponentChildren; description: string }) {
   return (
     <Link class="vc-link-card" href={props.to}>
       <span class="vc-link-card__icon" aria-hidden="true">
         <svg viewBox="0 0 20 20">{CARD_ICONS[props.icon]}</svg>
       </span>
       <span class="vc-link-card__text">
-        <span class="vc-link-card__title">{props.title}</span>
+        <span class="vc-link-card__title">
+          {props.title}
+          {props.tag}
+        </span>
         <span class="vc-link-card__desc">{props.description}</span>
       </span>
       <Chevron class="vc-link-card__chevron vc-flip" d="M8 5l5 5-5 5" />

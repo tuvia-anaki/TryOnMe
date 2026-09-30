@@ -11,6 +11,10 @@ import { handleFromHref, UI_ATTR } from "./cards";
 
 export const DONE_ATTR = "data-vc-done";
 export const HIDDEN_ATTR = "data-vc-hidden";
+/** What a card shows now, so it can be drawn again for another variant (a swatch was picked). */
+const TITLE_ATTR = "data-vc-title";
+const IMAGE_ATTR = "data-vc-image";
+const DISABLED_ATTR = "data-vc-disabled";
 
 export interface RenderContext {
   settings: AppSettings;
@@ -80,6 +84,7 @@ function uniquifyIds(root: Element, suffix: string): void {
 export function copyCard(source: Element): Element {
   const copy = source.cloneNode(true) as Element;
   uniquifyIds(copy, `-vc${++copies}`);
+  for (const attr of [TITLE_ATTR, IMAGE_ATTR]) copy.removeAttribute(attr);
   // Our own additions are rebuilt for every card.
   for (const ui of Array.from(copy.querySelectorAll(`[${UI_ATTR}]`))) ui.remove();
   return copy;
@@ -130,28 +135,36 @@ function patchForms(el: Element, card: VariantCard): void {
     input.setAttribute("value", id);
   }
   for (const node of Array.from(el.querySelectorAll("[data-variant-id]"))) node.setAttribute("data-variant-id", id);
-  // Sold-out variants can't be added.
-  if (!card.variant.available) {
-    for (const button of Array.from(el.querySelectorAll<HTMLButtonElement>("button[type='submit'][name='add'], button[name='add']"))) button.disabled = true;
+  // Sold-out variants can't be added (and buttons we turned off come back for one that can).
+  for (const button of Array.from(el.querySelectorAll<HTMLButtonElement>("button[type='submit'][name='add'], button[name='add']"))) {
+    if (!card.variant.available && !button.disabled) {
+      button.disabled = true;
+      button.setAttribute(DISABLED_ATTR, "");
+    } else if (card.variant.available && button.hasAttribute(DISABLED_ATTR)) {
+      button.disabled = false;
+      button.removeAttribute(DISABLED_ATTR);
+    }
   }
 }
 
 function patchTitle(el: Element, card: VariantCard, template: string): void {
-  const original = card.product.title.trim();
+  // The title the card shows now: the product's, or the one a previous render wrote.
+  const shown = (el.getAttribute(TITLE_ATTR) ?? card.product.title).trim();
   const title = formatTitle(template, card);
-  if (!original || title === original) return;
+  if (!shown || title === shown) return;
   const walker = el.ownerDocument.createTreeWalker(el, NodeFilter.SHOW_TEXT);
   const nodes: Text[] = [];
   while (walker.nextNode()) {
     const node = walker.currentNode as Text;
-    if (node.data.trim() === original && !node.parentElement?.closest(SKIP_TEXT)) nodes.push(node);
+    if (node.data.trim() === shown && !node.parentElement?.closest(SKIP_TEXT)) nodes.push(node);
   }
-  for (const node of nodes) node.data = node.data.replace(original, title);
+  for (const node of nodes) node.data = node.data.replace(shown, title);
   for (const attr of ["aria-label", "alt", "title", "data-product-title", "data-title"]) {
     for (const node of [el, ...Array.from(el.querySelectorAll(`[${attr}]`))]) {
-      if (node.getAttribute(attr)?.trim() === original) node.setAttribute(attr, title);
+      if (node.getAttribute(attr)?.trim() === shown) node.setAttribute(attr, title);
     }
   }
+  el.setAttribute(TITLE_ATTR, title);
 }
 
 /* ------------------------------------------------------------------ */
@@ -212,10 +225,13 @@ export function productImages(el: Element): HTMLImageElement[] {
   return Array.from(el.querySelectorAll<HTMLImageElement>("img")).filter((img) => !within(img, NOT_PRODUCT_IMAGE, el));
 }
 
-function patchImages(el: Element, card: VariantCard, settings: AppSettings): void {
-  if (!card.ownImage || !card.image) return;
+function patchImages(el: Element, card: VariantCard): void {
+  // A card without a photo of its own keeps the product's (put back if another variant's was shown).
+  const image = card.ownImage ? card.image : el.hasAttribute(IMAGE_ATTR) ? card.product.image : null;
+  if (!image) return;
+  el.setAttribute(IMAGE_ATTR, "");
   // Themes that render every product image with its media id (sliders): show the variant's first.
-  if (card.mediaId) {
+  if (card.ownImage && card.mediaId) {
     const id = card.mediaId;
     const target = Array.from(el.querySelectorAll(`[slide-id="${id}"], [data-media-id="${id}"], [data-image-id="${id}"], [data-media="${id}"]`)).find(
       (node) => !within(node, NOT_PRODUCT_IMAGE, el) && (node.matches("img, picture") || !!node.querySelector("img, picture")),
@@ -228,9 +244,7 @@ function patchImages(el: Element, card: VariantCard, settings: AppSettings): voi
       const slider = container && container !== el && Array.from(container.children).filter((child) => child.querySelector("img, picture") || child.matches("img, picture")).length > 1;
       if (container && slider) {
         container.prepend(slide);
-        const siblings = Array.from(container.children).filter((child) => child !== slide);
-        if (!settings.card.secondImage) for (const other of siblings) other.remove();
-        else for (const other of siblings) other.setAttribute("aria-hidden", "true");
+        for (const other of Array.from(container.children)) if (other !== slide) other.remove();
         // Themes keep the variant images they don't show hidden until that variant is picked
         // (Shopify's Horizon themes: <slideshow-slide variant-image hidden>). This card shows it.
         for (let node: Element | null = target; node && node !== container; node = node.parentElement) node.removeAttribute("hidden");
@@ -243,17 +257,11 @@ function patchImages(el: Element, card: VariantCard, settings: AppSettings): voi
   const images = productImages(el);
   const main = images[0];
   if (!main) return;
-  swapImage(main, card.image);
+  swapImage(main, image);
   // The theme's hover image would show another variant.
   let group: Element | null = main.parentElement;
   while (group && group !== el && productImages(group).length < 2) group = group.parentElement;
-  if (group) {
-    for (const other of productImages(group)) {
-      if (other === main) continue;
-      if (settings.card.secondImage) continue;
-      other.setAttribute(HIDDEN_ATTR, "");
-    }
-  }
+  if (group) for (const other of productImages(group)) if (other !== main) other.setAttribute(HIDDEN_ATTR, "");
 }
 
 /* ------------------------------------------------------------------ */
@@ -372,6 +380,7 @@ function setSoldOutState(el: Element, card: VariantCard, ctx: RenderContext): vo
     for (const label of labels) label.setAttribute(HIDDEN_ATTR, "");
     return;
   }
+  for (const label of labels) label.removeAttribute(HIDDEN_ATTR);
   if (!labels.length && ctx.settings.card.soldOutBadge) addBadge(el, ctx.texts.soldOut || "Sold out");
 }
 
@@ -397,17 +406,22 @@ function hideThemeSwatches(el: Element): void {
 /* Putting it together                                                 */
 /* ------------------------------------------------------------------ */
 
-/** Turn `el` (the theme card, or a copy of it) into the card for `card`. */
+/**
+ * Turn `el` (the theme card, or a copy of it) into the card for `card`. Also used again on the
+ * same element when a swatch picks another variant.
+ */
 export function renderCard(el: Element, card: VariantCard, ctx: RenderContext): Element {
   el.setAttribute(DONE_ATTR, "");
   el.setAttribute("data-vc-card", card.key);
+  for (const badge of Array.from(el.querySelectorAll(`[${UI_ATTR}='badge']`))) badge.remove();
   if (card.split) {
     patchLinks(el, card);
-    patchImages(el, card, ctx.settings);
+    patchImages(el, card);
     patchTitle(el, card, ctx.effective.title);
     patchForms(el, card);
-    if (ctx.settings.card.hideThemeSwatches) hideThemeSwatches(el);
   }
+  // The theme's swatches list every color: wrong on a card that shows one, doubled with ours.
+  if (card.split || ctx.settings.swatches.enabled) hideThemeSwatches(el);
   patchPrice(el, card, ctx);
   if (card.split) setSoldOutState(el, card, ctx);
   return el;

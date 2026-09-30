@@ -16,20 +16,21 @@ window.__vcAudit = async (budgetMs = 38000) => {
   const cards = [...document.querySelectorAll("[data-vc-card]")];
   const keys = {}; const issues = []; let split = 0;
   const amounts = (c) => [String(c), c % 100 === 0 ? String(c / 100) : null].filter(Boolean);
-  for (const el of cards) {
-    const key = el.getAttribute("data-vc-card"); keys[key] = (keys[key] || 0) + 1;
+  const checkCard = async (el, note = "") => {
+    const card = el.getAttribute("data-vc-card");
+    const key = card + note;
     const hrefs = [...el.querySelectorAll("a[href*='/products/']")].map((a) => a.getAttribute("href"));
     const handle = /\/products\/([^/?#]+)/.exec(hrefs[0] || "")?.[1];
     const r = el.getBoundingClientRect();
     if (r.width < 40 || r.height < 40) issues.push(`${key}: card collapsed ${Math.round(r.width)}x${Math.round(r.height)}`);
-    if (!key.includes(":") || !handle) continue;
-    split++;
-    const p = await load(handle); if (!p) { issues.push(`${key}: no product data`); continue; }
-    const value = key.slice(key.indexOf(":") + 1);
+    if (!key.includes(":") || !handle) return;
+    if (!note) split++;
+    const p = await load(handle); if (!p) { issues.push(`${key}: no product data`); return; }
+    const value = card.slice(card.indexOf(":") + 1);
     const idx = [0, 1, 2].find((i) => p.variants.some((v) => v.options[i] === value)) ?? -1;
     const group = idx >= 0 ? p.variants.filter((v) => v.options[idx] === value) : [];
     const rep = group.find((v) => v.available) ?? group[0];
-    if (!rep) { issues.push(`${key}: no variant for "${value}"`); continue; }
+    if (!rep) { issues.push(`${key}: no variant for "${value}"`); return; }
     // Links named after another color (the theme's swatches) rightly point at that color.
     const others = new Set(idx < 0 ? [] : p.variants.map((v) => v.options[idx]).filter((v) => v !== value).map((v) => v.trim().toLowerCase()));
     const own = [...el.querySelectorAll("a[href*='/products/']")].filter((a) => ![a.textContent, a.getAttribute("title"), a.getAttribute("aria-label"), a.getAttribute("data-value")].some((t) => t && others.has(t.trim().toLowerCase()))).map((a) => a.getAttribute("href"));
@@ -53,10 +54,44 @@ window.__vcAudit = async (budgetMs = 38000) => {
     if (!amounts(expect).some((a) => digits.includes(a))) issues.push(`${key}: price ${expect} not shown ("${text.slice(0, 90)}")`);
     // "Sold out" at most once (buttons aside).
     const soldLabels = [...el.querySelectorAll("span, div, p, strong, small, b, dd")].filter((n) => { if (n.closest("button")) return false; const t = (n.textContent || "").trim(); if (!/^(sold ?out|ausverkauft|épuisé|agotado)$/i.test(t)) return false; if ([...n.children].some((c) => (c.textContent || "").trim() === t)) return false; const r = n.getBoundingClientRect(); const cs = getComputedStyle(n); return r.width > 0 && r.height > 0 && cs.visibility !== "hidden" && Number(cs.opacity) > 0.05; });
-    if (soldLabels.length > 1) issues.push(`${key}: "Sold out" shown ${soldLabels.length} times`);
+    // A theme's scrolling ticker repeats its one label ("Sold out Sold out…"): count it once.
+    const soldPlaces = new Set(soldLabels.map((n) => n.parentElement)).size;
+    if (soldPlaces > 1) issues.push(`${key}: "Sold out" shown ${soldPlaces} times`);
     // Sold out: a sold-out color says so.
     if (!group.some((v) => v.available) && !/sold out|ausverkauft|épuisé|agotado/i.test(text)) issues.push(`${key}: sold out but no badge`);
+  };
+  for (const el of cards) {
+    const key = el.getAttribute("data-vc-card"); keys[key] = (keys[key] || 0) + 1;
+    await checkCard(el);
+  }
+  // Swatches (when on): visible, not covered by the theme's card link, and picking one redraws the card, on the page.
+  let swatched = 0;
+  for (const host of [...document.querySelectorAll("vc-swatches")].slice(0, 10)) {
+    const el = host.closest("[data-vc-card]");
+    const key = el?.getAttribute("data-vc-card") ?? "?";
+    const buttons = [...(host.shadowRoot?.querySelectorAll("button") ?? [])];
+    if (!el || buttons.length < 2) { issues.push(`${key}: swatches without a card or buttons`); continue; }
+    host.scrollIntoView({ block: "center" }); window.__vcIoCheck?.(); await new Promise((r) => setTimeout(r, 250)); settle();
+    const r = host.getBoundingClientRect(), cr = el.getBoundingClientRect();
+    if (r.width < 20 || r.height < 16 || getComputedStyle(host).visibility === "hidden") { issues.push(`${key}: swatches not visible ${Math.round(r.width)}x${Math.round(r.height)}`); continue; }
+    if (r.left < cr.left - 2 || r.right > cr.right + 2 || r.bottom > cr.bottom + 2) issues.push(`${key}: swatches outside the card`);
+    const other = buttons.find((b) => b.getAttribute("aria-pressed") !== "true");
+    const br = other.getBoundingClientRect();
+    const hit = document.elementFromPoint(br.left + br.width / 2, br.top + br.height / 2);
+    // Something of the card over the swatches (a link stretched over the card) would take the click. (Pop-ups over the page don't count.)
+    if (hit !== host && hit && el.contains(hit)) { issues.push(`${key}: swatch covered by ${hit.tagName.toLowerCase()}.${[...hit.classList].slice(0, 2).join(".")}`); continue; }
+    if (hit !== host) continue;
+    const page = location.href;
+    const back = buttons.find((b) => b.getAttribute("aria-pressed") === "true");
+    other.click();
+    await new Promise((r) => setTimeout(r, 400)); settle();
+    if (location.href !== page) { issues.push(`${key}: picking a swatch left the page`); break; }
+    if (el.getAttribute("data-vc-card") === key) issues.push(`${key}: picking ${other.title} didn't change the card`);
+    else await checkCard(el, ` (after picking ${other.title})`);
+    back?.click();
+    await new Promise((r) => setTimeout(r, 200));
+    swatched++;
   }
   for (const [key, n] of Object.entries(keys)) if (n > 1) issues.push(`${key}: shown ${n} times`);
-  return JSON.stringify({ url: location.pathname, cards: cards.length, split, issueCount: issues.length, issues: issues.slice(0, 20) });
+  return JSON.stringify({ url: location.pathname, cards: cards.length, split, swatched, issueCount: issues.length, issues: issues.slice(0, 20) });
 };

@@ -46,10 +46,13 @@ createServer(async (req, res) => {
       res.writeHead(200, { "Content-Type": "text/javascript", "Cache-Control": "no-store" });
       return res.end(readFileSync(ASSET));
     }
-    const switchTo = /^\/__demo\/([^/?]+)(?:\?to=(.*))?$/.exec(req.url);
+    // /__demo/<store>?to=/collections/all[&settings=<json>]: switch store (and app settings).
+    const switchTo = /^\/__demo\/([^/?]+)/.exec(req.url);
     if (switchTo) {
-      const to = decodeURIComponent(switchTo[2] || "/collections/all");
-      res.writeHead(200, { "Content-Type": "text/html", "Set-Cookie": `vc_demo=${encodeURIComponent(switchTo[1])}; Path=/` });
+      const query = new URL(req.url, "http://localhost").searchParams;
+      const to = query.get("to") || "/collections/all";
+      const cookies = [`vc_demo=${encodeURIComponent(switchTo[1])}; Path=/`, `vc_settings=${encodeURIComponent(query.get("settings") || "{}")}; Path=/`];
+      res.writeHead(200, { "Content-Type": "text/html", "Set-Cookie": cookies });
       return res.end(`<script>try{sessionStorage.clear()}catch(e){};location.replace(${JSON.stringify(to)})</script>`);
     }
     const demoHost = demoFrom(req);

@@ -11,6 +11,7 @@ declare global {
 }
 
 const NAV_LINKS: [string, string][] = [
+  ["/swatches", msg("Swatches")],
   ["/collections", msg("Collections")],
   ["/settings", msg("More settings")],
   ["/help", msg("Help")],

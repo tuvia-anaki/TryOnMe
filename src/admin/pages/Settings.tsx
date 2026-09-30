@@ -1,4 +1,5 @@
 import type { PriceFormat } from "../../shared/settings";
+import { TitlePicker } from "../components/choices";
 import { ErrorBanner, Loading } from "../components/common";
 import { Disclosure } from "../components/Disclosure";
 import { Area, Select, Text } from "../components/fields";
@@ -51,26 +52,11 @@ export function Settings() {
     <s-page inlineSize="base">
       {header}
       <div class="vc-stack">
-        <Panel title={t("Sold out and missing photos")}>
-          <ToggleList>
-            <ToggleRow
-              title={t("Hide sold-out cards")}
-              description={t("A product that's completely sold out keeps one card.")}
-              checked={s.hide.soldOut}
-              onChange={(soldOut) => patch("hide", { soldOut })}
-            />
-            <ToggleRow title={t("Show sold-out cards last")} checked={s.order.soldOutLast} onChange={(soldOutLast) => patch("order", { soldOutLast })} />
-            <ToggleRow
-              title={t("Hide cards without their own photo")}
-              description={t("Cards that would show the product's main photo instead.")}
-              checked={s.hide.noImage}
-              onChange={(noImage) => patch("hide", { noImage })}
-            />
-          </ToggleList>
-        </Panel>
-
-        <Panel title={t("On each card")}>
+        <Panel title={t("Cards")}>
           <div class="vc-columns">
+            {s.split.enabled && (
+              <TitlePicker title={s.split.title} by={s.split.by} onChange={(title) => patch("split", { title })} />
+            )}
             <Select<PriceFormat>
               label={t("Price")}
               details={t("When a card's sizes cost different amounts.")}
@@ -85,20 +71,32 @@ export function Settings() {
               onChange={(order) => patch("order", { mix: order === "mix" })}
             />
           </div>
+        </Panel>
+
+        <Panel title={t("Sold out and missing photos")}>
           <ToggleList>
+            <ToggleRow
+              title={t("Hide sold-out cards")}
+              description={t("A product that's completely sold out keeps one card.")}
+              checked={s.hide.soldOut}
+              onChange={(soldOut) => patch("hide", { soldOut })}
+            />
+            <ToggleRow title={t("Show sold-out cards last")} checked={s.order.soldOutLast} onChange={(soldOutLast) => patch("order", { soldOutLast })} />
             <ToggleRow title={t("“Sold out” badge")} checked={s.card.soldOutBadge} onChange={(soldOutBadge) => patch("card", { soldOutBadge })} />
             <ToggleRow
-              title={t("Hide the theme's swatches")}
-              description={t("They would list every variant on a card that shows just one.")}
-              checked={s.card.hideThemeSwatches}
-              onChange={(hideThemeSwatches) => patch("card", { hideThemeSwatches })}
+              title={t("Hide cards without their own photo")}
+              description={t("Cards that would show the product's main photo instead.")}
+              checked={s.hide.noImage}
+              onChange={(noImage) => patch("hide", { noImage })}
             />
-            <ToggleRow
-              title={t("Second photo on hover")}
-              description={t("Often another variant's photo, so it's off by default.")}
-              checked={s.card.secondImage}
-              onChange={(secondImage) => patch("card", { secondImage })}
-            />
+          </ToggleList>
+        </Panel>
+
+        <Panel title={t("Also show cards on")}>
+          <ToggleList>
+            <ToggleRow title={t("All products page")} checked={s.pages.allProducts} onChange={(allProducts) => patch("pages", { allProducts })} />
+            <ToggleRow title={t("Search results")} checked={s.pages.search} onChange={(search) => patch("pages", { search })} />
+            <ToggleRow title={t("Product grids on the home page")} checked={s.pages.home} onChange={(home) => patch("pages", { home })} />
           </ToggleList>
         </Panel>
 

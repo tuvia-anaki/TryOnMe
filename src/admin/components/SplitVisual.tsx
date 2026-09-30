@@ -7,7 +7,7 @@ import { useId } from "preact/hooks";
 
 export type SplitKind = "style" | "variant" | "option" | "none";
 
-const TEE = "M8 3L4 5L2 9l3 1.5L6 9v12h12V9l1 1.5L22 9l-2-4-4-2c-1 2-7 2-8 0z";
+export const TEE = "M8 3L4 5L2 9l3 1.5L6 9v12h12V9l1 1.5L22 9l-2-4-4-2c-1 2-7 2-8 0z";
 
 function Card(props: { x: number; w: number; fill: string; label?: string; dots?: string[] }) {
   const { x, w } = props;

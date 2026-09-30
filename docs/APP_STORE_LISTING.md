@@ -11,13 +11,14 @@
 Every color, material or scent gets its own card on your collection pages, so shoppers see your whole range at a glance.
 
 **App details (≤500 chars):**
-Show each variant — each color, material, scent or any option you pick — as its own product card on collection and search pages, with its own image, title, price and link, in your theme's own card design. Choose the collections, hide sold-out variants or ones without a photo, mix colors of different products, and set a manual card order per collection. Works with your theme's filters and sorting. Every feature is free.
+Show each variant — each color, material, scent or any option you pick — as its own product card on collection and search pages, with its own image, title, price and link, in your theme's own card design. Add swatches so shoppers pick a color right on the card, choose the collections, hide sold-out variants, and set a manual card order per collection. Works with your theme's filters and sorting. Every feature is free.
 
 **Feature list (≤80 chars each):**
 - Show each style (color, material, scent…) or any option as its own card on collection pages
 - Works with your theme's cards, filters and sorting — no code
 - Custom titles and price ranges; hide sold-out or image-less variants
-- Per-collection settings with drag-and-drop card order
+- Swatches: shoppers pick a color right on the product card
+- Drag-and-drop card order per collection
 - Pause in one click; no theme code changes
 - Free for all stores: unlimited collections, no plans
 

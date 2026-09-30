@@ -41,21 +41,24 @@ function optionChoices(options: StoreOption[] | undefined, current: string | nul
   return list;
 }
 
+/** "Every variant" in the option list (all options together). */
+const EVERY = "__every__";
+
+/** What gets its own card: three pictures (each style, one option, one card per product). */
 export function SplitPicker(props: { enabled: boolean; by: SplitBy; labelHidden?: boolean; onChange: (split: { enabled: boolean; by: SplitBy }) => void }) {
   const options = useAsync(() => loadOptionNames(), []);
   const kind = splitKind(props.enabled, props.by);
+  const picked = kind === "variant" ? "option" : kind;
   const current = splitOptionName(props.by);
   const available = optionChoices(options.data, current);
-  const noOptions = !!options.data && !available.length;
 
   const choose = (next: SplitKind) => {
     if (next === "none") props.onChange({ enabled: false, by: props.by });
-    else if (next === "variant") props.onChange({ enabled: true, by: "all" });
     else if (next === "style") props.onChange({ enabled: true, by: "auto" });
-    else if (available.length) {
+    else if (kind !== "option" && kind !== "variant") {
       // Start with the most common option that isn't a size (sizes rarely deserve their own cards).
       const first = available.find((o) => !isSizeOptionName(o.name)) ?? available[0];
-      props.onChange({ enabled: true, by: `option:${current ?? first.name}` });
+      props.onChange({ enabled: true, by: first ? `option:${first.name}` : "all" });
     }
   };
 
@@ -64,7 +67,7 @@ export function SplitPicker(props: { enabled: boolean; by: SplitBy; labelHidden?
       <ChoiceCards<SplitKind>
         label={t("What gets its own card")}
         labelHidden={props.labelHidden}
-        value={kind}
+        value={picked}
         onChange={choose}
         choices={[
           {
@@ -74,28 +77,24 @@ export function SplitPicker(props: { enabled: boolean; by: SplitBy; labelHidden?
             description: t("Colors, materials, scents… each gets its own card. Sizes stay together."),
             visual: <SplitVisual kind="style" />,
           },
-          { value: "variant", title: t("Each variant"), description: t("Every variant gets its own card, sizes too."), visual: <SplitVisual kind="variant" /> },
-          {
-            value: "option",
-            title: t("Pick an option"),
-            description: noOptions ? t("Your products don't have options yet.") : t("Split by one option you choose, like Scent or Size."),
-            visual: <SplitVisual kind="option" />,
-            disabled: noOptions && kind !== "option",
-          },
-          { value: "none", title: t("Don't split"), description: t("One card per product, like your theme."), visual: <SplitVisual kind="none" /> },
+          { value: "option", title: t("Pick an option"), description: t("Split by one option you choose, like Scent or Size."), visual: <SplitVisual kind="option" /> },
+          { value: "none", title: t("One card per product"), description: t("Like your theme. Add swatches to pick colors on the card."), visual: <SplitVisual kind="none" /> },
         ]}
       />
-      {kind === "option" && (
+      {picked === "option" && (
         <div class="vc-narrow">
           <Dropdown
             label={t("Which option")}
-            value={current ?? ""}
-            options={available.map((o) => ({
-              value: o.name,
-              label: o.name,
-              description: o.products ? [tn(o.products, "{count} product", "{count} products"), o.example && t("e.g. {example}", { example: o.example })].filter(Boolean).join(" · ") : undefined,
-            }))}
-            onChange={(name) => props.onChange({ enabled: true, by: `option:${name}` })}
+            value={kind === "variant" ? EVERY : (current ?? "")}
+            options={[
+              ...available.map((o) => ({
+                value: o.name,
+                label: o.name,
+                description: o.products ? [tn(o.products, "{count} product", "{count} products"), o.example && t("e.g. {example}", { example: o.example })].filter(Boolean).join(" · ") : undefined,
+              })),
+              { value: EVERY, label: t("Every variant"), description: t("All options together, like Red / S") },
+            ]}
+            onChange={(name) => props.onChange({ enabled: true, by: name === EVERY ? "all" : `option:${name}` })}
           />
         </div>
       )}

@@ -33,8 +33,8 @@ const product = (id: number, handle: string) => ({
 const card = (handle: string, variant?: number) =>
   `<li class="card"><a href="/products/${handle}${variant ? `?variant=${variant}` : ""}"><img src="/cdn/${handle}.jpg" alt=""></a><h3>${handle}</h3><span class="price">$25.00</span></li>`;
 
-function context(): PageContext {
-  const settings = sanitizeSettings({ ...DEFAULT_SETTINGS, split: { enabled: true, by: "auto", title: "{product} - {value}" } });
+function context(overrides: Record<string, unknown> = {}): PageContext {
+  const settings = sanitizeSettings({ ...DEFAULT_SETTINGS, split: { enabled: true, by: "auto", title: "{product} - {value}" }, ...overrides });
   return {
     template: "collection",
     collection: { handle: "all", id: 1 },
@@ -215,5 +215,83 @@ describe("engine", () => {
       // The photo shoppers see must not stay hidden.
       expect(first?.hasAttribute("hidden"), `${card.label} slide hidden`).toBe(false);
     }
+  });
+
+  describe("swatches", () => {
+    // A tee in three colors, each with its own photo; Green is sold out. The product photo is Blue's.
+    const tee = () => ({
+      ...product(1, "tee"),
+      options: [{ name: "Color", position: 1, values: ["Red", "Blue", "Green"] }],
+      featured_image: "//cdn/blue.jpg",
+      variants: ["Red", "Blue", "Green"].map((color, i) => ({
+        id: 10 + i,
+        title: color,
+        option1: color,
+        option2: null,
+        option3: null,
+        available: color !== "Green",
+        price: 2500 + i * 100,
+        compare_at_price: null,
+        featured_image: { src: `//cdn/${color.toLowerCase()}.jpg` },
+      })),
+    });
+    const themeCard = (handle: string) =>
+      `<li class="card"><a href="/products/${handle}"><img src="/cdn/${handle}.jpg" alt=""></a><h3>${handle}</h3><span class="price">$25.00</span><div class="card__swatches"><span class="swatch" title="Red"></span><span class="swatch" title="Blue"></span></div></li>`;
+    const buttons = (el: Element) => Array.from(el.querySelector("vc-swatches")!.shadowRoot!.querySelectorAll("button"));
+    const state = (el: Element) => ({
+      key: el.getAttribute("data-vc-card"),
+      title: el.querySelector("h3")!.textContent,
+      href: el.querySelector("a")!.getAttribute("href"),
+      image: el.querySelector("img")!.getAttribute("src"),
+      price: el.querySelector(".price")!.textContent,
+      pressed: buttons(el).find((b) => b.getAttribute("aria-pressed") === "true")?.title,
+    });
+    const setup = async (overrides: Record<string, unknown>) => {
+      document.body.innerHTML = `<main><ul class="grid">${themeCard("tee")}${themeCard("hat")}</ul></main>`;
+      vi.stubGlobal("fetch", async (url: string) => {
+        const handle = /\/products\/([^/?#]+)\.js/.exec(String(url))![1];
+        return new Response(JSON.stringify(handle === "tee" ? tee() : product(2, "hat")));
+      });
+      const engine = new Engine(context({ swatches: { enabled: true }, ...overrides }));
+      const [grid] = engine.grids();
+      return (await engine.processGrid(grid)).filter((r) => r.card.product.handle === "tee").map((r) => r.el);
+    };
+
+    it("pick a color on a variant card: the same card shows that color", async () => {
+      const [red, blue, green] = await setup({});
+      expect([red, blue, green].map((el) => state(el).key)).toEqual(["1:Red", "1:Blue", "1:Green"]);
+      expect(buttons(red).map((b) => b.title)).toEqual(["Red", "Blue", "Green"]);
+      expect(buttons(red).map((b) => b.classList.contains("sold"))).toEqual([false, false, true]);
+      expect(state(red)).toMatchObject({ title: "tee - Red", pressed: "Red" });
+      // The theme's own swatches would list every color on a card that shows one.
+      expect(red.querySelector(".card__swatches")!.hasAttribute("data-vc-hidden")).toBe(true);
+
+      buttons(red)[1].click();
+      expect(state(red)).toMatchObject({ key: "1:Blue", title: "tee - Blue", href: "/products/tee?variant=11", pressed: "Blue", price: "$26.00" });
+      expect(state(red).image).toContain("blue.jpg");
+      // Sold out: says so; picking a color that's in stock again takes the label away.
+      buttons(red)[2].click();
+      expect(red.querySelector(".vc-badge")?.textContent).toBe("Sold out");
+      buttons(red)[0].click();
+      expect(state(red)).toMatchObject({ key: "1:Red", title: "tee - Red", href: "/products/tee?variant=10", pressed: "Red", price: "$25.00" });
+      expect(state(red).image).toContain("red.jpg");
+      expect(red.querySelector(".vc-badge")).toBeNull();
+    });
+
+    it("hides sold-out colors when sold-out cards are hidden", async () => {
+      const [red, blue] = await setup({ hide: { soldOut: true } });
+      expect(buttons(red).map((b) => b.title)).toEqual(["Red", "Blue"]);
+      expect(buttons(blue).map((b) => b.title)).toEqual(["Red", "Blue"]);
+    });
+
+    it("one card per product: the colors are picked on the card, the name stays", async () => {
+      const [tee] = await setup({ split: { enabled: false } });
+      // The product photo is Blue's, so Blue is the one shown.
+      expect(state(tee)).toMatchObject({ key: "1", title: "tee", pressed: "Blue" });
+      expect(tee.querySelector(".card__swatches")!.hasAttribute("data-vc-hidden")).toBe(true);
+      buttons(tee)[0].click();
+      expect(state(tee)).toMatchObject({ title: "tee", href: "/products/tee?variant=10", pressed: "Red" });
+      expect(state(tee).image).toContain("red.jpg");
+    });
   });
 });
