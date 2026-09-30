@@ -2,6 +2,7 @@ import { render } from "preact";
 import { useEffect, useState } from "preact/hooks";
 import { App } from "./App";
 import { initI18n, msg, onLanguageChange, t } from "./i18n";
+import { loadSupportChat } from "./lib/support-chat";
 import "./styles.css";
 
 declare global {
@@ -57,6 +58,10 @@ async function boot(): Promise<void> {
   await initI18n(window.shopify?.config?.locale);
   renderNav();
   render(<Root />, document.getElementById("app")!);
+  // The support chat bubble on every page, loaded after the app so it never slows it down.
+  loadSupportChat().catch(() => {
+    // Optional: a blocked or slow chat must never break the admin.
+  });
 }
 
 void boot();

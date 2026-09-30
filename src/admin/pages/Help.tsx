@@ -1,6 +1,8 @@
 import { APP_NAME, SUPPORT_EMAIL } from "../../shared/brand";
 import { Button, PageHeader, Panel } from "../components/ui";
 import { msg, t } from "../i18n";
+import { toast } from "../lib/hooks";
+import { openSupportChat } from "../lib/support-chat";
 import { navigate } from "../router";
 
 const CHECKLIST = [
@@ -86,13 +88,20 @@ export function Help() {
         </Panel>
 
         <Panel title={t("Contact")}>
-          {SUPPORT_EMAIL ? (
+          <p class="vc-text">{t("Questions or ideas? Chat with us right here in the app.")}</p>
+          <div class="vc-actions">
+            <Button
+              variant="primary"
+              onClick={() => openSupportChat("help").catch(() => toast(t("The chat couldn't load. An ad blocker may be blocking it."), true))}
+            >
+              {t("Chat with us")}
+            </Button>
+          </div>
+          {SUPPORT_EMAIL && (
             <p class="vc-text">
               {t("Email us at {email}. Include your store address and a link to the collection page.", { email: SUPPORT_EMAIL })}{" "}
               <s-link href={`mailto:${SUPPORT_EMAIL}`}>{t("Write an email")}</s-link>
             </p>
-          ) : (
-            <p class="vc-text">{t("{app} is maintained by a small team. Reach us through the app's listing page in the Shopify App Store.", { app: APP_NAME })}</p>
           )}
         </Panel>
       </div>

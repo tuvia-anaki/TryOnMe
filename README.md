@@ -9,6 +9,7 @@ A **100% free** Shopify app that shows every product variant as its own product 
 - **Per collection** — turn cards on or off, **drag-and-drop the order** of its variant cards, hide individual cards.
 - **Few decisions** — Home has the status (with the one action that matters: "Turn on in theme editor", "Pause", "Turn back on"), three picture choices for what gets its own card, the swatches switch and where cards show; everything else is in "More settings". A warning shows when another variant app is also on in the theme.
 - **Simple admin** — big titles, switches, picture choices instead of jargon, the app's own dropdowns, Shopify's collection picker, the language picker at the top of Home, and Shopify's save bar only on form pages (Home, More settings, a collection) and only while there are unsaved changes.
+- **Support chat** — the Tidio live chat from the earlier Virtual Try-On app: a chat bubble on every admin page (loaded after the app, never slowing it down) and "Chat with us" on Help; the operator sees the shop, its admin language and the app.
 - **Admin in 19 languages** (follows the Shopify admin, with an in-app language picker); storefront texts ("Sold out", "From $10") in 30 languages.
 
 The app deliberately stays focused: earlier versions also had sections, add-to-cart buttons, "Load more" and per-collection overrides of every setting; they were removed to keep it simple and reliable.
