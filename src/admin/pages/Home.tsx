@@ -2,12 +2,12 @@ import type { ComponentChildren } from "preact";
 import { useEffect, useState } from "preact/hooks";
 import { APP_NAME } from "../../shared/brand";
 import type { AppSettings } from "../../shared/settings";
-import { listProducts, type ProductPage } from "../api/products";
+import { listProducts, type ProductPage, type ProductRow } from "../api/products";
 import { loadAppContext } from "../api/settings";
 import { loadThemeStatus, themeEditorUrl, type ThemeStatus } from "../api/theme";
-import { ErrorBanner, openAdmin, openExternal } from "../components/common";
+import { ErrorBanner, openExternal } from "../components/common";
 import { LanguagePicker } from "../components/LanguagePicker";
-import { FilterTabs, ProductTable, canSetUp, matchesFilter, type ProductFilter } from "../components/ProductTable";
+import { FilterTabs, ProductTable, canSetUp, matchesFilter, readyFirst, type ProductFilter } from "../components/ProductTable";
 import { t } from "../i18n";
 import { useAsync, useDebounced, type AsyncState } from "../lib/hooks";
 import { navigate } from "../router";
@@ -202,35 +202,44 @@ function swatchStatus(settings: AppSettings | null) {
 
 const ROWS_STEP = 5;
 
-/** Products the app applies to, like on competitors' home pages: what's left to set up, and what's done. */
-function HomeProducts({ recent }: { recent: AsyncState<ProductPage> }) {
+function mergeRows(first: ProductRow[], second: ProductRow[]): ProductRow[] {
+  const seen = new Set(first.map((row) => row.id));
+  return [...first, ...second.filter((row) => !seen.has(row.id))];
+}
+
+/**
+ * The store's products, like on competitors' home pages: what's left to set up
+ * (products that can be set up first) and what's done. Every row opens inside the app.
+ */
+function HomeProducts({ withVariants }: { withVariants: AsyncState<ProductPage> }) {
   const [tab, setTab] = useState<ProductFilter>("todo");
   const [search, setSearch] = useState("");
   const [limit, setLimit] = useState(ROWS_STEP);
   const query = useDebounced(search.trim(), 350);
-  const found = useAsync(
-    () => (query ? listProducts({ search: query, withVariants: true, pageSize: 50 }) : Promise.resolve(null)),
-    [query],
-  );
+  // Recently edited products of any kind, so the list is never empty…
+  const latest = useAsync(() => listProducts({ pageSize: 50, sort: "updated" }), []);
+  const found = useAsync(() => (query ? listProducts({ search: query, pageSize: 50 }) : Promise.resolve(null)), [query]);
   useEffect(() => setLimit(ROWS_STEP), [tab, query]);
 
-  const list = query ? found : recent;
-  const all = list.data?.rows ?? [];
+  // …plus the products with variants (the ones that can be set up), even if not edited lately.
+  const all = query ? (found.data?.rows ?? []) : mergeRows(withVariants.data?.rows ?? [], latest.data?.rows ?? []);
+  const loading = query ? found.loading : withVariants.loading || latest.loading;
+  const error = query ? found.error : (withVariants.error ?? latest.error);
   const matching = all.filter((row) => matchesFilter(row, tab));
+  const rows = tab === "todo" ? readyFirst(matching) : matching;
+  const noneReady = !loading && tab === "todo" && rows.length > 0 && !rows.some(canSetUp);
 
-  let empty: ComponentChildren;
-  if (query) empty = t("No products match “{search}”.", { search: query });
-  else if (tab === "configured") empty = t("None of your recently edited products are set up yet.");
-  else if (all.some(canSetUp)) empty = t("Nothing left to set up among your recently edited products.");
-  else
-    empty = (
-      <s-stack direction="block" gap="small-200" alignItems="center">
-        <s-text color="subdued">
-          {t("Variant images work on products with at least 2 variants (like colors) and 2 images. None of your recent products have that yet.")}
-        </s-text>
-        <s-button onClick={() => openAdmin("/products")}>{t("Open products in Shopify")}</s-button>
-      </s-stack>
-    );
+  const empty = query
+    ? t("No products match “{search}”.", { search: query })
+    : tab === "configured"
+      ? t("None of your recently edited products are set up yet.")
+      : t("Nothing left to set up among your recently edited products.");
+
+  const retry = () => {
+    if (query) return found.reload();
+    withVariants.reload();
+    latest.reload();
+  };
 
   return (
     <s-section padding="none" accessibilityLabel={t("Products")}>
@@ -254,16 +263,21 @@ function HomeProducts({ recent }: { recent: AsyncState<ProductPage> }) {
               onInput={(event) => setSearch(event.currentTarget.value ?? "")}
             />
           </s-grid>
+          {noneReady && (
+            <s-banner tone="info">
+              {t("Variant images work on products with at least 2 variants (like colors) and 2 images. None of your recent products have that yet.")}
+            </s-banner>
+          )}
         </s-grid>
       </s-box>
-      {list.error ? (
+      {error ? (
         <s-box padding="base">
-          <ErrorBanner error={list.error} onRetry={list.reload} />
+          <ErrorBanner error={error} onRetry={retry} />
         </s-box>
       ) : (
-        <ProductTable variant="compact" rows={matching.slice(0, limit)} loading={list.loading} empty={empty} />
+        <ProductTable variant="compact" rows={rows.slice(0, limit)} loading={loading} empty={empty} />
       )}
-      {!list.loading && matching.length > limit && (
+      {!loading && rows.length > limit && (
         <s-box padding="small">
           <s-stack direction="inline" justifyContent="center">
             <s-button variant="tertiary" onClick={() => setLimit(limit + ROWS_STEP)}>
@@ -419,7 +433,7 @@ export function Home() {
           </s-grid>
         </s-query-container>
 
-        <HomeProducts recent={recent} />
+        <HomeProducts withVariants={recent} />
 
         <s-section>
           <s-grid gridTemplateColumns="@container (inline-size <= 520px) 1fr, 1fr auto" gap="large" alignItems="center">

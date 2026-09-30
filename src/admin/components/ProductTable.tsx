@@ -12,8 +12,13 @@ export function canSetUp(row: ProductRow): boolean {
 
 export function matchesFilter(row: ProductRow, filter: ProductFilter): boolean {
   if (filter === "configured") return row.configured;
-  if (filter === "todo") return !row.configured && canSetUp(row);
+  if (filter === "todo") return !row.configured;
   return true;
+}
+
+/** Products that can be set up first; the rest keep their order. */
+export function readyFirst(rows: ProductRow[]): ProductRow[] {
+  return [...rows.filter(canSetUp), ...rows.filter((row) => !canSetUp(row))];
 }
 
 export function StatusBadge({ row }: { row: ProductRow }) {
@@ -124,9 +129,9 @@ export function ProductTable(props: {
                 <StatusBadge row={row} />
               </s-table-cell>
               <s-table-cell>
-                {(row.configured || canSetUp(row)) && (
-                  <s-button onClick={() => openProduct(row)}>{row.configured ? t("Edit") : t("Assign images")}</s-button>
-                )}
+                <s-button onClick={() => openProduct(row)}>
+                  {row.configured ? t("Edit") : canSetUp(row) ? t("Assign images") : t("View")}
+                </s-button>
               </s-table-cell>
             </s-table-row>
           ))}

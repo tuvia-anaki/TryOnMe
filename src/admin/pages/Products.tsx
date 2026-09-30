@@ -1,7 +1,7 @@
 import { useState } from "preact/hooks";
 import { listProducts } from "../api/products";
 import { ErrorBanner } from "../components/common";
-import { FilterTabs, ProductTable, matchesFilter, type ProductFilter } from "../components/ProductTable";
+import { FilterTabs, ProductTable, matchesFilter, readyFirst, type ProductFilter } from "../components/ProductTable";
 import { t } from "../i18n";
 import { useAsync, useDebounced } from "../lib/hooks";
 import { navigate, useQueryParam } from "../router";
@@ -14,14 +14,15 @@ export function Products() {
   const query = useDebounced(search, 350);
   const [cursor, setCursor] = useState<{ after?: string | null; before?: string | null }>({});
   const [filter, setFilter] = useState<ProductFilter>(initial && FILTERS.includes(initial) ? initial : "all");
-  // Only products with variants can be (or need to be) set up: skip the rest on those tabs.
-  const withVariants = filter !== "all";
+  // Products that are set up always have variants: let Shopify skip the rest.
+  const withVariants = filter === "configured";
   const page = useAsync(
     () => listProducts({ search: query, withVariants, ...cursor, pageSize: 50 }),
     [query, withVariants, cursor.after, cursor.before],
   );
 
-  const rows = (page.data?.rows ?? []).filter((row) => matchesFilter(row, filter));
+  const matching = (page.data?.rows ?? []).filter((row) => matchesFilter(row, filter));
+  const rows = filter === "todo" ? readyFirst(matching) : matching;
 
   return (
     <s-page heading={t("Products")} inlineSize="large">

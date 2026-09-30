@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { listProducts, type ProductRow } from "../../src/admin/api/products";
-import { canSetUp, matchesFilter } from "../../src/admin/components/ProductTable";
+import { canSetUp, matchesFilter, readyFirst } from "../../src/admin/components/ProductTable";
 import { availableLanguages, currentLanguage, initI18n, languageName, onLanguageChange, setLanguage, t } from "../../src/admin/i18n";
 
 const row = (overrides: Partial<ProductRow>): ProductRow => ({
@@ -21,14 +21,18 @@ const row = (overrides: Partial<ProductRow>): ProductRow => ({
 });
 
 describe("product filters", () => {
-  it("lists only products that can be set up under 'Not set up'", () => {
-    expect(matchesFilter(row({}), "todo")).toBe(true);
-    expect(matchesFilter(row({ configured: true, groups: 3 }), "todo")).toBe(false);
-    expect(matchesFilter(row({ variantsCount: 1 }), "todo")).toBe(false);
-    expect(matchesFilter(row({ mediaCount: 1 }), "todo")).toBe(false);
-    expect(matchesFilter(row({ configured: true, groups: 3 }), "configured")).toBe(true);
-    expect(matchesFilter(row({ variantsCount: 1 }), "all")).toBe(true);
+  it("lists every product that isn't set up, the ones that can be set up first", () => {
+    const ready = row({ id: 1 });
+    const single = row({ id: 2, variantsCount: 1 });
+    const oneImage = row({ id: 3, mediaCount: 1 });
+    const done = row({ id: 4, configured: true, groups: 3 });
+    const all = [single, oneImage, ready, done];
+    expect(all.filter((r) => matchesFilter(r, "todo")).map((r) => r.id)).toEqual([2, 3, 1]);
+    expect(readyFirst(all.filter((r) => matchesFilter(r, "todo"))).map((r) => r.id)).toEqual([1, 2, 3]);
+    expect(all.filter((r) => matchesFilter(r, "configured")).map((r) => r.id)).toEqual([4]);
+    expect(all.filter((r) => matchesFilter(r, "all"))).toHaveLength(4);
     expect(canSetUp(row({ variantsCount: 2, mediaCount: 2 }))).toBe(true);
+    expect(canSetUp(single)).toBe(false);
   });
 });
 
