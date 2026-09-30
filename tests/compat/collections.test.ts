@@ -118,8 +118,15 @@ run("collection pages of real themes", () => {
         const squash = (text: string) => text.replace(/\s+/g, " ");
         if (squash(el.textContent ?? "").includes(squash(`${card.product.title} - ${card.label}`))) titled++;
         const file = card.image?.split("/").pop()?.split("?")[0]?.replace(/\.\w+$/, "") ?? "";
-        const imageOk = Array.from(el.querySelectorAll("img")).some((img) => (img.getAttribute("src") ?? "").includes(file) || (img.getAttribute("data-src") ?? "").includes(file));
+        const matches = Array.from(el.querySelectorAll("img")).filter((img) => (img.getAttribute("src") ?? "").includes(file) || (img.getAttribute("data-src") ?? "").includes(file));
+        // The photo must also be visible: not inside something the theme hides (e.g. <slideshow-slide hidden>).
+        const visible = (img: Element) => {
+          for (let node: Element | null = img; node && node !== el.parentElement; node = node.parentElement) if (node.hasAttribute("hidden")) return false;
+          return true;
+        };
+        const imageOk = matches.some(visible);
         if (card.ownImage && file && imageOk) imaged++;
+        if (card.ownImage && file && matches.length && !imageOk) problems.push(`${card.key}: image hidden`);
         if (process.env.VC_DEBUG === name && card.ownImage && file && !imageOk && debugged++ < 2) {
           console.log(`IMAGE MISS ${card.key} want ${file}\n` + Array.from(el.querySelectorAll("img, [data-bgset], [style*='background']")).slice(0, 4).map((n) => n.outerHTML.slice(0, 400)).join("\n"));
         }

@@ -185,7 +185,12 @@ export function swapImage(img: HTMLImageElement, src: string): void {
   }
 }
 
-const NOT_PRODUCT_IMAGE = `[class*='swatch' i], [class*='badge' i], [class*='icon' i], [class*='logo' i], [class*='vendor' i], [class*='rating' i], [${UI_ATTR}]`;
+/**
+ * Images that aren't the product photo: swatches, badges, icons… A gallery is never one of
+ * them, even with a "badge" modifier (Horizon themes: "card-gallery--badge-top-left").
+ */
+const GALLERY = ":not([class*='gallery' i]):not([class*='media' i])";
+const NOT_PRODUCT_IMAGE = `[class*='swatch' i], [class*='badge' i]${GALLERY}, [class*='icon' i]${GALLERY}, [class*='logo' i], [class*='vendor' i], [class*='rating' i], [${UI_ATTR}]`;
 
 export function productImages(el: Element): HTMLImageElement[] {
   return Array.from(el.querySelectorAll<HTMLImageElement>("img")).filter((img) => !within(img, NOT_PRODUCT_IMAGE, el));
@@ -209,6 +214,10 @@ function patchImages(el: Element, card: VariantCard, settings: AppSettings): voi
         container.prepend(slide);
         const siblings = Array.from(container.children).filter((child) => child !== slide);
         if (!settings.card.secondImage) for (const other of siblings) other.remove();
+        else for (const other of siblings) other.setAttribute("aria-hidden", "true");
+        // Themes keep the variant images they don't show hidden until that variant is picked
+        // (Shopify's Horizon themes: <slideshow-slide variant-image hidden>). This card shows it.
+        for (let node: Element | null = target; node && node !== container; node = node.parentElement) node.removeAttribute("hidden");
         slide.removeAttribute("aria-hidden");
         for (const img of Array.from(slide.querySelectorAll("img"))) img.setAttribute("loading", "eager");
         return;
