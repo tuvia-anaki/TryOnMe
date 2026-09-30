@@ -12,8 +12,9 @@ const DIR = "extensions/variant-cards";
 const locale = JSON.parse(readFileSync(`${DIR}/locales/en.default.json`, "utf8"));
 const read = (path: string) => readFileSync(`${DIR}/${path}`, "utf8").replace(/{%\s*schema\s*%}[\s\S]*?{%\s*endschema\s*%}/, "");
 
-function engine(): Liquid {
-  const liquid = new Liquid({ root: [`${DIR}/snippets`], extname: ".liquid", strictFilters: true });
+/** `globals` are Shopify's global objects (app, routes, request), which snippets see too. */
+function engine(globals: Record<string, unknown> = {}): Liquid {
+  const liquid = new Liquid({ root: [`${DIR}/snippets`], extname: ".liquid", strictFilters: true, globals });
   const money = (cents: number) => `$${(Number(cents) / 100).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
   liquid.registerFilter("money", money);
   liquid.registerFilter("money_with_currency", (cents: number) => `${money(cents)} USD`);
@@ -112,14 +113,12 @@ const tee = {
 const mugVariant = variant(9, "Default Title", "");
 const mug = { ...tee, title: "Mug", url: "/products/mug", has_only_default_variant: true, options_with_values: [{ name: "Title", position: 1, values: [{ name: "Default Title" }] }], variants: [mugVariant], selected_or_first_available_variant: mugVariant };
 
-async function grid(settings: Record<string, unknown>) {
-  const html = await engine().parseAndRender(`{% render 'vc-grid', products: products, s: s, block: block, view_all_url: '' %}`, {
+async function grid(settings: Record<string, unknown>, split: Record<string, unknown> = {}) {
+  const globals = { app: app({ split: { title: "{product} - {value}", ...split } }), routes: { cart_add_url: "/cart/add" }, request: { design_mode: false } };
+  const html = await engine(globals).parseAndRender(`{% render 'vc-grid', products: products, s: s, block: block, view_all_url: '' %}`, {
     products: [tee, mug],
     s: { split: true, limit: 12, columns_desktop: 4, columns_mobile: 2, show_swatches: true, show_add_to_cart: true, ...settings },
     block: { id: "b1" },
-    app: app({ split: { title: "{product} - {value}" } }),
-    routes: { cart_add_url: "/cart/add" },
-    request: { design_mode: false },
   });
   const titles = [...html.matchAll(/class="vc-card__title" href="([^"]+)">([^<]+)</g)].map((m) => `${m[2]} → ${m[1]}`);
   return { html, titles };
@@ -139,5 +138,16 @@ describe("app sections (vc-grid)", () => {
     expect((await grid({ hide_sold_out: true })).titles.map((t) => t.split(" → ")[0])).toEqual(["Tee - Red", "Tee - Green", "Mug"]);
     expect((await grid({ limit: 2 })).titles).toHaveLength(2);
     expect((await grid({ split: false })).titles.map((t) => t.split(" → ")[0])).toEqual(["Tee", "Mug"]);
+  });
+
+  it("follows the app's choice of what gets its own card", async () => {
+    const names = async (by: string) => (await grid({}, { by })).titles.map((t) => t.split(" → ")[0]);
+    expect(await names("option:size")).toEqual(["Tee - S", "Tee - M", "Mug"]);
+    expect(await names("option:Material")).toEqual(["Tee", "Mug"]);
+    const each = await grid({}, { by: "all" });
+    expect(each.titles.slice(0, 3)).toEqual(["Tee - Red / S → /products/tee?variant=1", "Tee - Red / M → /products/tee?variant=2", "Tee - Blue / S → /products/tee?variant=3"]);
+    expect(each.titles).toHaveLength(7);
+    // One variant per card: nothing left to choose, so the card adds to cart.
+    expect(each.html).not.toContain("Choose options");
   });
 });

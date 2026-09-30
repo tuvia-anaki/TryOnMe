@@ -7,6 +7,15 @@
   assign vc = app.metafields.variant_cards.settings.value
   assign title_template = vc.split.title | default: '{product} - {value}'
   assign color_words = 'color,colour,colors,colours,colorway,shade,farbe,farben,couleur,couleurs,colore,colori,cor,cores,kleur,kleuren,färg,farge,farve,väri,kolor,barva,renk,culoare,szín,цвет,колір,צבע,لون,رنگ,颜色,顏色,カラー,色,색상,สี' | split: ','
+  # What gets its own card (the app's setting): each color, each value of a named option, or each variant.
+  assign split_by = vc.split.by | default: 'auto'
+  assign split_name = nil
+  assign split_each = false
+  if split_by == 'all'
+    assign split_each = true
+  elsif split_by contains 'option:'
+    assign split_name = split_by | remove_first: 'option:' | downcase | strip
+  endif
   assign limit = s.limit | default: 8
   assign carousel = false
   if s.layout == 'carousel'
@@ -47,17 +56,41 @@
         {%- if count >= limit -%}{%- break -%}{%- endif -%}
         {%- liquid
           assign split_option = nil
+          assign each_variant = false
           if s.split and product.has_only_default_variant == false
-            for option in product.options_with_values
-              assign option_name = option.name | downcase | strip
-              if color_words contains option_name and option.values.size > 1
-                assign split_option = option
-                break
-              endif
-            endfor
+            if split_each
+              assign each_variant = true
+            else
+              for option in product.options_with_values
+                if option.values.size < 2
+                  continue
+                endif
+                assign option_name = option.name | downcase | strip
+                if split_name
+                  if option_name == split_name
+                    assign split_option = option
+                    break
+                  endif
+                elsif color_words contains option_name
+                  assign split_option = option
+                  break
+                endif
+              endfor
+            endif
           endif
         -%}
-        {%- if split_option -%}
+        {%- if each_variant -%}
+          {%- for rep in product.variants -%}
+            {%- if count >= limit -%}{%- break -%}{%- endif -%}
+            {%- if s.hide_sold_out and rep.available == false -%}{%- continue -%}{%- endif -%}
+            {%- liquid
+              assign title = title_template | replace: '{product.title}', product.title | replace: '{product}', product.title | replace: '{value}', rep.title | replace: '{variant.title}', rep.title | replace: '{variant}', rep.title | replace: '{option1}', rep.option1 | replace: '{option2}', rep.option2 | replace: '{option3}', rep.option3 | replace: '{vendor}', product.vendor | replace: '{type}', product.type | strip
+            -%}
+            {%- comment -%} split_key 'id': the card stands for this one variant. {%- endcomment -%}
+            {%- render 'vc-card', product: product, variant: rep, title: title, split_key: 'id', s: s -%}
+            {%- assign count = count | plus: 1 -%}
+          {%- endfor -%}
+        {%- elsif split_option -%}
           {%- assign split_key = 'option' | append: split_option.position -%}
           {%- for value in split_option.values -%}
             {%- if count >= limit -%}{%- break -%}{%- endif -%}

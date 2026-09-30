@@ -1,5 +1,6 @@
 import { COLLECTION_KEY, COLLECTION_NAMESPACE } from "../../shared/constants";
 import { isDefaultCollectionSettings, sanitizeCollectionSettings, type CollectionSettings } from "../../shared/settings";
+import { isColorOptionName } from "../../shared/product";
 import type { VcProduct } from "../../shared/split";
 import { gql, throwUserErrors, type UserError } from "./graphql";
 
@@ -217,20 +218,86 @@ export async function saveCollectionSettings(collectionGid: string, settings: Co
   throwUserErrors(data.metafieldsSet.userErrors, "Couldn't save the collection's settings");
 }
 
-const COUNTS_QUERY = `#graphql
-query CatalogCounts {
-  withVariants: productsCount(query: "has_only_default_variant:false") { count precision }
-  products: productsCount { count precision }
-  collectionsCount { count precision }
-}`;
+/* ------------------------------------------------------------------ */
+/* Collections chosen in the settings, and the store's option names    */
+/* ------------------------------------------------------------------ */
 
-export interface CatalogCounts {
-  products: number;
-  withVariants: number;
-  collections: number;
+export interface ChosenCollection {
+  handle: string;
+  /** null when no collection has this handle any more. */
+  id: string | null;
+  title: string | null;
+  image: string | null;
+  productsCount: number | null;
 }
 
-export async function loadCounts(): Promise<CatalogCounts> {
-  const data = await gql<{ withVariants: { count: number }; products: { count: number }; collectionsCount: { count: number } }>(COUNTS_QUERY);
-  return { products: data.products.count, withVariants: data.withVariants.count, collections: data.collectionsCount.count };
+interface ByHandleNode {
+  id: string;
+  title: string;
+  handle: string;
+  image: { url: string } | null;
+  productsCount: { count: number } | null;
+}
+
+/** The settings keep collection handles (what the theme sees); this looks up their titles and images, in order. */
+export async function loadCollectionsByHandle(handles: string[]): Promise<ChosenCollection[]> {
+  const out: ChosenCollection[] = [];
+  for (let start = 0; start < handles.length; start += 25) {
+    const chunk = handles.slice(start, start + 25);
+    const query = `query CollectionsByHandle(${chunk.map((_, i) => `$h${i}: String!`).join(", ")}) {
+${chunk.map((_, i) => `  c${i}: collectionByIdentifier(identifier: { handle: $h${i} }) { id title handle image { url(transform: { maxWidth: 120 }) } productsCount { count } }`).join("\n")}
+}`;
+    const data = await gql<Record<string, ByHandleNode | null>>(query, Object.fromEntries(chunk.map((handle, i) => [`h${i}`, handle])));
+    chunk.forEach((handle, i) => {
+      const c = data[`c${i}`];
+      out.push(
+        c
+          ? { handle, id: c.id, title: c.title, image: c.image?.url ?? null, productsCount: c.productsCount?.count ?? null }
+          : { handle, id: null, title: null, image: null, productsCount: null },
+      );
+    });
+  }
+  return out;
+}
+
+const OPTION_NAMES_QUERY = `#graphql
+query OptionNames {
+  products(first: 50, sortKey: UPDATED_AT, reverse: true) {
+    nodes { options(first: 3) { name optionValues { name } } }
+  }
+}`;
+
+export interface StoreOption {
+  name: string;
+  /** How many of the sampled products have it. */
+  products: number;
+  /** One of its values, for examples ("Cotton"). */
+  example: string;
+}
+
+let optionNames: Promise<StoreOption[]> | null = null;
+
+/** The options the store's products use besides color, most common first (from recently updated products; asked once per visit). */
+export function loadOptionNames(): Promise<StoreOption[]> {
+  optionNames ??= fetchOptionNames();
+  optionNames.catch(() => {
+    optionNames = null;
+  });
+  return optionNames;
+}
+
+async function fetchOptionNames(): Promise<StoreOption[]> {
+  const data = await gql<{ products: { nodes: { options: { name: string; optionValues: { name: string }[] }[] }[] } }>(OPTION_NAMES_QUERY);
+  const found = new Map<string, StoreOption>();
+  for (const product of data.products.nodes) {
+    for (const option of product.options) {
+      const name = option.name.trim();
+      const key = name.toLowerCase();
+      if (!name || key === "title" || isColorOptionName(name) || option.optionValues.length < 2) continue;
+      const entry = found.get(key);
+      if (entry) entry.products++;
+      else found.set(key, { name, products: 1, example: option.optionValues[0]?.name ?? "" });
+    }
+  }
+  return [...found.values()].sort((a, b) => b.products - a.products || a.name.localeCompare(b.name));
 }

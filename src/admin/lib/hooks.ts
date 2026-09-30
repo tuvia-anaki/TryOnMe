@@ -45,11 +45,12 @@ export function toast(message: string, isError = false): void {
 }
 
 /**
- * App Bridge contextual save bar. Shows while `dirty`, and asks the
- * merchant to confirm before in-app navigation drops unsaved changes.
+ * App Bridge contextual save bar, for pages with a form (Shopify's rule):
+ * shown only while there are unsaved changes, asks before Discard, and asks
+ * before in-app navigation drops the changes. `id` null = no save bar.
  */
 export function useSaveBar(
-  id: string,
+  id: string | null,
   dirty: boolean,
   saving: boolean,
   handlers: { onSave: () => void; onDiscard: () => void },
@@ -60,8 +61,10 @@ export function useSaveBar(
   const elementRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
+    if (!id) return;
     const bar = document.createElement("ui-save-bar");
     bar.id = id;
+    bar.setAttribute("discardConfirmation", "");
     const save = document.createElement("button");
     save.setAttribute("variant", "primary");
     save.textContent = labels.save;
@@ -80,6 +83,7 @@ export function useSaveBar(
   }, [id]);
 
   useEffect(() => {
+    if (!id) return;
     const bar = elementRef.current;
     const save = bar?.querySelector("button[variant=primary]");
     if (save) {

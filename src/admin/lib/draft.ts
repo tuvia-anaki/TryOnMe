@@ -6,9 +6,10 @@ import { toast, useAsync, useSaveBar } from "./hooks";
 
 /**
  * Editing the shop settings: a draft, Shopify's save bar while it differs
- * from what's saved, and one save for everything on the page.
+ * from what's saved (pages with a form pass a save bar id), and one save for
+ * everything on the page. Without an id, only save(change) is used.
  */
-export function useSettingsDraft(saveBarId: string) {
+export function useSettingsDraft(saveBarId: string | null = null) {
   const context = useAsync(() => loadAppContext(), []);
   const [draft, setDraft] = useState<AppSettings | null>(null);
   const [saved, setSaved] = useState<AppSettings | null>(null);
@@ -40,6 +41,27 @@ export function useSettingsDraft(saveBarId: string) {
     }
   };
 
+  /**
+   * One immediate change to the saved settings (pause, resume, setup progress), outside any
+   * form: no save bar involved, and it doesn't count as "settings saved" for the setup guide.
+   */
+  const update = async (change: (settings: AppSettings) => AppSettings, message?: string): Promise<boolean> => {
+    if (!context.data || !saved || saving) return false;
+    setSaving(true);
+    try {
+      const clean = await saveSettings(context.data, change(saved));
+      setDraft(clean);
+      setSaved(clean);
+      if (message) toast(message);
+      return true;
+    } catch (error) {
+      toast((error as Error).message, true);
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const discard = () => setDraft(saved);
 
   /** Change one group of settings: patch("split", { enabled: true }). */
@@ -54,5 +76,5 @@ export function useSettingsDraft(saveBarId: string) {
 
   useSaveBar(saveBarId, dirty, saving, { onSave: () => void save(), onDiscard: discard }, { save: t("Save"), discard: t("Discard") });
 
-  return { context, draft, dirty, saving, save, discard, patch, setDraft };
+  return { context, draft, dirty, saving, save, update, discard, patch, setDraft };
 }

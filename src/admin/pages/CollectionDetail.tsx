@@ -3,29 +3,31 @@ import {
   EMPTY_COLLECTION_SETTINGS,
   TITLE_PRESETS,
   effectiveSettings,
+  isDefaultCollectionSettings,
+  splitOptionName,
   type AppSettings,
   type CollectionSettings,
   type PriceFormat,
   type SplitBy,
 } from "../../shared/settings";
 import { arrangeCards, formatTitle, productCards, type VariantCard } from "../../shared/split";
-import { loadCollection, loadCollectionProducts, saveCollectionSettings } from "../api/collections";
+import { loadCollection, loadCollectionProducts, loadOptionNames, saveCollectionSettings } from "../api/collections";
 import { loadAppContext, saveSettings } from "../api/settings";
+import { splitSummary, titleChoices } from "../components/choices";
 import { ErrorBanner, Loading, openExternal } from "../components/common";
-import { Card, Select, Text } from "../components/fields";
+import { Disclosure } from "../components/Disclosure";
+import { Card, Check, Select, Text } from "../components/fields";
 import { formatNumber, t, tn } from "../i18n";
 import { toast, useAsync, useSaveBar } from "../lib/hooks";
 import { navigate } from "../router";
 import { collectionIsOn } from "./Collections";
-import { splitByOptions, titleOptions } from "./Dashboard";
+import { orderChoices, priceChoices } from "./Settings";
 
-type Tri = "inherit" | "on" | "off";
-const tri = (value: boolean | null): Tri => (value === null ? "inherit" : value ? "on" : "off");
-const fromTri = (value: Tri): boolean | null => (value === "inherit" ? null : value === "on");
+const INHERIT = "inherit";
+const CUSTOM = "__custom__";
 
-function priceLabels(): Record<PriceFormat, string> {
-  return { theme: t("Like the theme (From $10)"), from: t("From the lowest price"), range: t("Price range ($10 – $15)") };
-}
+/** "Same as your settings", with what that currently means underneath. */
+const same = (current: string): [typeof INHERIT, string, string] => [INHERIT, t("Same as your settings"), current];
 
 function money(cents: number): string {
   try {
@@ -108,6 +110,7 @@ export function CollectionDetail({ id }: { id: number }) {
   const collection = useAsync(() => loadCollection(id), [id]);
   const [progress, setProgress] = useState(0);
   const products = useAsync(() => loadCollectionProducts(id, 200, setProgress), [id]);
+  const optionNames = useAsync(() => loadOptionNames(), []);
   const [draft, setDraft] = useState<CollectionSettings>(EMPTY_COLLECTION_SETTINGS);
   const [saved, setSaved] = useState<CollectionSettings>(EMPTY_COLLECTION_SETTINGS);
   const [shop, setShop] = useState<AppSettings | null>(null);
@@ -204,11 +207,33 @@ export function CollectionDetail({ id }: { id: number }) {
       setDraft({ ...draft, enabled: value ? null : false });
     }
   };
-  const inherit = (label: string) => t("Shop setting ({value})", { value: label });
-  const onOff = (value: boolean) => (value ? t("on") : t("off"));
   const hidden = new Set(draft.hidden);
-  const splitLabel = splitByOptions().find(([v]) => v === shop.split.by)?.[1] ?? "";
   const storeUrl = context.data?.shop.url ?? `https://${context.data?.shop.domain}`;
+  const overrides = !isDefaultCollectionSettings({ ...draft, order: [], hidden: [], enabled: null });
+
+  // What gets its own card: one list with every choice, including each option name in the store.
+  const splitValue = draft.split === false ? "none" : (draft.by ?? (draft.split === true ? shop.split.by : INHERIT));
+  const names = [...new Set([...(optionNames.data ?? []).map((o) => o.name), ...[splitOptionName(shop.split.by), draft.by ? splitOptionName(draft.by) : null].filter((n): n is string => !!n)])];
+  const splitOptions: [string, string, string?][] = [
+    same(splitSummary(shop.split.enabled, shop.split.by)),
+    ["auto", t("Each color")],
+    ["all", t("Each variant")],
+    ...names.map((name): [string, string] => [`option:${name}`, t("Each {option}", { option: name })]),
+    ["none", t("Don't split")],
+  ];
+  const setSplit = (v: string) =>
+    setDraft({ ...draft, split: v === INHERIT ? null : v !== "none", by: v === INHERIT || v === "none" ? null : (v as SplitBy) });
+
+  const titleBy = effective?.by ?? shop.split.by;
+  const titleExample = optionNames.data?.find((o) => o.name.toLowerCase() === (splitOptionName(titleBy) ?? "").toLowerCase())?.example;
+  const titleValue = draft.title === null ? INHERIT : (TITLE_PRESETS as readonly string[]).includes(draft.title) ? draft.title : CUSTOM;
+  const titleOptions: [string, string, string?][] = [
+    same(titleChoices(titleBy, titleExample).find((o) => o.value === shop.split.title)?.label ?? shop.split.title),
+    ...titleChoices(titleBy, titleExample).map((o): [string, string, string?] => [o.value, o.label, o.description]),
+    [CUSTOM, t("Custom"), t("Write your own")],
+  ];
+  const showHide = (value: boolean | null) => (value === null ? INHERIT : value ? "hide" : "show");
+  const fromShowHide = (value: string) => (value === INHERIT ? null : value === "hide");
 
   const move = (from: number, to: number) => {
     const keys = cards.map((c) => c.key);
@@ -222,104 +247,22 @@ export function CollectionDetail({ id }: { id: number }) {
       <s-link slot="breadcrumb-actions" onClick={() => void navigate("/collections")}>
         {t("Collections")}
       </s-link>
-      <s-button slot="primary-action" variant="primary" disabled={!dirty || saving} loading={saving} onClick={() => void save()}>
-        {t("Save")}
-      </s-button>
       <s-button slot="secondary-actions" onClick={() => openExternal(`${storeUrl}/collections/${row.handle}`)}>
         {t("View in store")}
       </s-button>
 
       <s-stack direction="block" gap="base">
         <Card heading={t("Variant cards in this collection")}>
-          <s-switch
+          <Check
             label={t("Show variant cards on this collection's page")}
-            details={shop.collections.mode === "selected" ? t("Adds or removes this collection from your selected collections.") : undefined}
+            details={shop.collections.mode === "selected" ? t("Adds it to (or removes it from) the collections you chose in Settings.") : undefined}
             checked={on}
-            onChange={(event) => setOn(event.currentTarget.checked)}
+            onChange={setOn}
           />
-          {!shop.enabled && <s-banner tone="warning">{t("Variant Cards is switched off for the whole store (see the dashboard).")}</s-banner>}
+          {!shop.enabled && <s-banner tone="warning">{t("Variant Cards is paused for the whole store (see Home).")}</s-banner>}
         </Card>
 
-        <Card heading={t("Settings for this collection")} description={t("Anything left on “Shop setting” follows your general settings.")}>
-          <s-query-container>
-            <s-grid gridTemplateColumns="@container (inline-size <= 520px) 1fr, 1fr 1fr" gap="base">
-              <Select<Tri>
-                label={t("Show each variant as its own card")}
-                value={tri(draft.split)}
-                options={[
-                  ["inherit", inherit(onOff(shop.split.enabled))],
-                  ["on", t("On")],
-                  ["off", t("Off")],
-                ]}
-                onChange={(v) => setDraft({ ...draft, split: fromTri(v) })}
-              />
-              <Select<SplitBy | "inherit">
-                label={t("Split products by")}
-                value={draft.by ?? "inherit"}
-                options={[["inherit", inherit(splitLabel)], ...splitByOptions()]}
-                onChange={(v) => setDraft({ ...draft, by: v === "inherit" ? null : v })}
-              />
-              <Select<string>
-                label={t("Card title")}
-                value={draft.title ?? "inherit"}
-                options={[
-                  ["inherit", inherit(titleOptions(shop.split.title).find(([v]) => v === shop.split.title)?.[1] ?? shop.split.title)],
-                  ...titleOptions(draft.title ?? TITLE_PRESETS[0]),
-                ]}
-                onChange={(v) => setDraft({ ...draft, title: v === "inherit" ? null : v })}
-              />
-              <Select<PriceFormat | "inherit">
-                label={t("Price format")}
-                value={draft.price ?? "inherit"}
-                options={[
-                  ["inherit", inherit(priceLabels()[shop.price.format])],
-                  ["theme", t("Like the theme (From $10)")],
-                  ["from", t("From the lowest price")],
-                  ["range", t("Price range ($10 – $15)")],
-                ]}
-                onChange={(v) => setDraft({ ...draft, price: v === "inherit" ? null : v })}
-              />
-              <Select<Tri>
-                label={t("Hide sold-out variants")}
-                value={tri(draft.hideSoldOut)}
-                options={[
-                  ["inherit", inherit(onOff(shop.hide.soldOut))],
-                  ["on", t("On")],
-                  ["off", t("Off")],
-                ]}
-                onChange={(v) => setDraft({ ...draft, hideSoldOut: fromTri(v) })}
-              />
-              <Select<Tri>
-                label={t("Hide variants without their own image")}
-                value={tri(draft.hideNoImage)}
-                options={[
-                  ["inherit", inherit(onOff(shop.hide.noImage))],
-                  ["on", t("On")],
-                  ["off", t("Off")],
-                ]}
-                onChange={(v) => setDraft({ ...draft, hideNoImage: fromTri(v) })}
-              />
-              <Select<Tri>
-                label={t("Mix variants of different products")}
-                value={tri(draft.mix)}
-                options={[
-                  ["inherit", inherit(onOff(shop.order.mix))],
-                  ["on", t("On")],
-                  ["off", t("Off")],
-                ]}
-                onChange={(v) => setDraft({ ...draft, mix: fromTri(v) })}
-              />
-            </s-grid>
-          </s-query-container>
-          {draft.title && !(TITLE_PRESETS as readonly string[]).includes(draft.title) && (
-            <Text label={t("Custom title")} value={draft.title} onChange={(title) => setDraft({ ...draft, title: title || null })} />
-          )}
-        </Card>
-
-        <Card
-          heading={t("Card order")}
-          description={t("Drag cards (or use the arrows) to choose the order shoppers see. Hidden cards never show in this collection. The order applies within each page of the collection.")}
-        >
+        <Card heading={t("Card order")} description={t("Drag cards to change the order shoppers see. Hidden cards don't show in this collection.")}>
           {products.error ? (
             <ErrorBanner error={products.error} onRetry={products.reload} />
           ) : products.loading ? (
@@ -362,6 +305,57 @@ export function CollectionDetail({ id }: { id: number }) {
             </>
           )}
         </Card>
+
+        <Disclosure title={t("Different settings for this collection")} summary={overrides ? t("Some settings are changed") : t("Same as your settings")} defaultOpen={overrides}>
+          <s-section>
+            <s-query-container>
+              <s-grid gridTemplateColumns="@container (inline-size <= 560px) 1fr, 1fr 1fr" gap="base">
+                <Select<string> showDescription label={t("What gets its own card")} value={splitValue} options={splitOptions} onChange={setSplit} />
+                <Select<string>
+                  showDescription
+                  label={t("Card title")}
+                  value={titleValue}
+                  options={titleOptions}
+                  disabled={!(effective?.split ?? true)}
+                  onChange={(v) => setDraft({ ...draft, title: v === INHERIT ? null : v === CUSTOM ? "{product} · {value}" : v })}
+                />
+                <Select<string>
+                  showDescription
+                  label={t("Price")}
+                  value={draft.price ?? INHERIT}
+                  options={[same(priceChoices().find(([v]) => v === shop.price.format)![1]), ...priceChoices()]}
+                  onChange={(v) => setDraft({ ...draft, price: v === INHERIT ? null : (v as PriceFormat) })}
+                />
+                <Select<string>
+                  showDescription
+                  label={t("Card order")}
+                  value={draft.mix === null ? INHERIT : draft.mix ? "mix" : "together"}
+                  options={[same(orderChoices().find(([v]) => v === (shop.order.mix ? "mix" : "together"))![1]), ...orderChoices()]}
+                  onChange={(v) => setDraft({ ...draft, mix: v === INHERIT ? null : v === "mix" })}
+                />
+                <Select<string>
+                  showDescription
+                  label={t("Sold-out cards")}
+                  value={showHide(draft.hideSoldOut)}
+                  options={[same(shop.hide.soldOut ? t("Hide") : t("Show")), ["show", t("Show")], ["hide", t("Hide")]]}
+                  onChange={(v) => setDraft({ ...draft, hideSoldOut: fromShowHide(v) })}
+                />
+                <Select<string>
+                  showDescription
+                  label={t("Cards without their own photo")}
+                  value={showHide(draft.hideNoImage)}
+                  options={[same(shop.hide.noImage ? t("Hide") : t("Show")), ["show", t("Show")], ["hide", t("Hide")]]}
+                  onChange={(v) => setDraft({ ...draft, hideNoImage: fromShowHide(v) })}
+                />
+              </s-grid>
+            </s-query-container>
+            {draft.title !== null && !(TITLE_PRESETS as readonly string[]).includes(draft.title) && (
+              <s-box paddingBlockStart="base">
+                <Text label={t("Custom title")} value={draft.title} onChange={(title) => setDraft({ ...draft, title: title || null })} />
+              </s-box>
+            )}
+          </s-section>
+        </Disclosure>
       </s-stack>
     </s-page>
   );

@@ -6,7 +6,7 @@
 
 type Json = any;
 
-const STORE_KEY = "vc-mock-store-v1";
+const STORE_KEY = "vc-mock-store-v2";
 /** Theme files name the app's blocks "shopify://apps/<name Shopify picks>/blocks/<block>/<extension id>". */
 const APP_SEGMENT = "variant-cards";
 /** Served by the Vite dev middleware (vite.config.ts). */
@@ -52,7 +52,13 @@ interface Store {
 let seq = 5000;
 const nextId = () => ++seq;
 
-function product(title: string, colors: [string, string][], sizes: string[], price: number, opts: { compareAt?: number; vendor?: string; type?: string; noVariantImages?: boolean; swatches?: boolean } = {}): MockProduct {
+function product(
+  title: string,
+  colors: [string, string][],
+  sizes: string[],
+  price: number,
+  opts: { compareAt?: number; vendor?: string; type?: string; noVariantImages?: boolean; swatches?: boolean; optionNames?: [string, string] } = {},
+): MockProduct {
   const id = nextId();
   const handle = title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
   const variants: MockVariant[] = [];
@@ -76,7 +82,7 @@ function product(title: string, colors: [string, string][], sizes: string[], pri
     handle,
     vendor: opts.vendor ?? "Acme Studio",
     productType: opts.type ?? "Apparel",
-    options: sizes.length ? ["Color", "Size"] : ["Color"],
+    options: sizes.length ? [opts.optionNames?.[0] ?? "Color", opts.optionNames?.[1] ?? "Size"] : [opts.optionNames?.[0] ?? "Color"],
     image: variants[0]?.image ?? IMG(`${handle}-main`, title, "#b9b9b9"),
     variants,
     swatches: opts.swatches ? Object.fromEntries(colors.map(([name, color]) => [name, color])) : {},
@@ -91,6 +97,7 @@ function seed(): Store {
     product("Ceramic mug", [["White", "#f7f7f7"], ["Black", "#111"], ["Terracotta", "#c65d3b"]], [], 18, { type: "Home" }),
     product("Canvas tote", [["Natural", "#e9dfc9"]], [], 22, { type: "Bags" }),
     product("Wool beanie", [["Mustard", "#d4a017"], ["Rust", "#b7410e"], ["Navy", "#1f2a44"], ["Cream", "#f3ead3"]], [], 29, { type: "Accessories", noVariantImages: true }),
+    product("Soy candle", [["Fig", "#8e6c8a"], ["Cedar", "#8a6f4e"], ["Amber", "#d08a2e"]], ["Small", "Large"], 24, { type: "Home", optionNames: ["Scent", "Size"] }),
   ];
   for (let i = 1; i <= 30; i++) {
     products.push(product(`Sample product ${String(i).padStart(2, "0")}`, [["Blue", "#1f4fd1"], ["Green", "#2e8b3a"]], ["One size"], 15 + i));
@@ -99,7 +106,7 @@ function seed(): Store {
   const collections: MockCollection[] = [
     { id: 101, title: "Tops", handle: "tops", sortOrder: "MANUAL", productIds: ids(["Classic tee", "Linen shirt", "Everyday hoodie"]), settings: null },
     { id: 102, title: "Summer", handle: "summer", sortOrder: "BEST_SELLING", productIds: ids(["Linen shirt", "Classic tee", "Canvas tote", "Sample product"]), settings: null },
-    { id: 103, title: "Home & living", handle: "home", sortOrder: "ALPHA_ASC", productIds: ids(["Ceramic mug", "Canvas tote"]), settings: null },
+    { id: 103, title: "Home & living", handle: "home", sortOrder: "ALPHA_ASC", productIds: ids(["Soy candle", "Ceramic mug", "Canvas tote"]), settings: null },
     { id: 104, title: "Accessories", handle: "accessories", sortOrder: "CREATED_DESC", productIds: ids(["Wool beanie", "Canvas tote"]), settings: null },
     { id: 105, title: "Sale", handle: "sale", sortOrder: "PRICE_ASC", productIds: ids(["Linen shirt"]), settings: null },
   ];
@@ -218,12 +225,6 @@ function handle(query: string, variables: Json): Json {
       const id = num(variables.id);
       return { theme: { id: variables.id, name: id === 1 ? "Dawn" : "Savor – new look", role: id === 1 ? "MAIN" : "UNPUBLISHED", themeStoreId: null, files: { nodes: themeFiles(id) } } };
     }
-    case "CatalogCounts":
-      return {
-        withVariants: { count: store.products.filter((p) => p.variants.length > 1).length, precision: "EXACT" },
-        products: { count: store.products.length, precision: "EXACT" },
-        collectionsCount: { count: store.collections.length, precision: "EXACT" },
-      };
     case "CollectionsList": {
       const term = String(variables.query ?? "").replace(/^title:\*|\*$/g, "").toLowerCase().trim();
       const list = store.collections.filter((c) => !term || c.title.toLowerCase().includes(term));
@@ -256,6 +257,17 @@ function handle(query: string, variables: Json): Json {
       }
       persist(store);
       return { metafieldsDelete: { deletedMetafields: [{ key: "settings" }], userErrors: [] } };
+    }
+    case "OptionNames":
+      return { products: { nodes: store.products.slice(0, 50).map((p) => ({ options: p.options.map((name, i) => ({ name, optionValues: [...new Set(p.variants.map((v) => v.options[i]))].map((value) => ({ name: value })) })) })) } };
+    case "CollectionsByHandle": {
+      const out: Record<string, Json> = {};
+      for (const [key, handle] of Object.entries(variables as Record<string, string>)) {
+        const c = store.collections.find((x) => x.handle === handle);
+        const node = c ? collectionNode(c, store) : null;
+        out[`c${key.slice(1)}`] = node ? { id: node.id, title: node.title, handle: node.handle, image: node.image, productsCount: node.productsCount } : null;
+      }
+      return out;
     }
     case "ColorValues":
       return {
@@ -346,10 +358,13 @@ export function installMock(): void {
         if (document.querySelector(".vc-mock-savebar") && !confirm("Leave without saving?")) await new Promise(() => undefined);
       },
     },
-    resourcePicker: async () => [
-      { id: gid("Collection", 102), handle: "summer", title: "Summer" },
-      { id: gid("Collection", 105), handle: "sale", title: "Sale" },
-    ],
+    resourcePicker: async (options: { selectionIds?: { id: string }[] }) => {
+      const store = load();
+      const ids = new Set([...(options?.selectionIds ?? []).map((s) => s.id), gid("Collection", 102), gid("Collection", 105)]);
+      return store.collections
+        .filter((c) => ids.has(gid("Collection", c.id)))
+        .map((c) => ({ id: gid("Collection", c.id), handle: c.handle, title: c.title, productsCount: c.productIds.length }));
+    },
   };
   // Toggle the embed state with localStorage "vc-mock-embed" = "on" / "off"; reset with vcMockReset().
   (window as any).vcMockReset = () => {

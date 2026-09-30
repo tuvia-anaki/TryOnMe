@@ -1,10 +1,37 @@
-import { SECTIONS } from "../../shared/constants";
+import { SECTIONS, type SectionHandle } from "../../shared/constants";
 import { loadAppContext } from "../api/settings";
-import { addSectionUrl, listThemes, loadThemeStatus } from "../api/theme";
+import { addSectionUrl, listThemes, loadThemeStatus, preferredTheme } from "../api/theme";
 import { ErrorBanner, openExternal } from "../components/common";
 import { msg, t } from "../i18n";
 import { useAsync } from "../lib/hooks";
-import { SECTION_INFO } from "./Dashboard";
+
+const SECTION_INFO: Record<SectionHandle, { name: string; description: string; where: string }> = {
+  "featured-collection": {
+    name: msg("Featured collection"),
+    description: msg("A collection's products as variant cards, on any page."),
+    where: msg("Home page"),
+  },
+  "best-sellers": {
+    name: msg("Best sellers"),
+    description: msg("Your best-selling products, from a collection sorted by best selling."),
+    where: msg("Home page"),
+  },
+  "hand-picked": {
+    name: msg("Hand-picked products"),
+    description: msg("Products you choose, each color as its own card."),
+    where: msg("Home page"),
+  },
+  "related-products": {
+    name: msg("Related products"),
+    description: msg("Shopify's recommendations for the product being viewed."),
+    where: msg("Product pages"),
+  },
+  "promo-card": {
+    name: msg("Promo card"),
+    description: msg("An image tile inside the collection grid, at the position you choose."),
+    where: msg("Collection pages"),
+  },
+};
 
 const IMAGES: Record<string, string> = {
   "featured-collection": "/illustrations/assign.svg",
@@ -12,14 +39,6 @@ const IMAGES: Record<string, string> = {
   "hand-picked": "/illustrations/swatches.svg",
   "related-products": "/illustrations/assign.svg",
   "promo-card": "/illustrations/embed.svg",
-};
-
-const TIPS: Record<string, string> = {
-  "featured-collection": msg("Pick any collection. Colors show as separate cards, like on your collection pages."),
-  "best-sellers": msg("Pick a collection whose sort order is “Best selling” (Products → Collections → Sort). To show your whole store, create a collection with the condition “Price is greater than 0” and sort it by best selling."),
-  "hand-picked": msg("Choose up to 24 products in the theme editor."),
-  "related-products": msg("Uses Shopify's own recommendations. Add it to your product page template."),
-  "promo-card": msg("Upload an image, add a text and a link, and choose its position in the grid. Add it to your collection template."),
 };
 
 const ADD_LABEL: Record<string, string> = {
@@ -31,8 +50,7 @@ const ADD_LABEL: Record<string, string> = {
 export function Sections() {
   const context = useAsync(() => loadAppContext(), []);
   const themes = useAsync(() => listThemes(), []);
-  const settings = context.data?.settings;
-  const theme = themes.data?.find((th) => th.id === settings?.admin.themeId) ?? themes.data?.find((th) => th.role === "MAIN") ?? null;
+  const theme = preferredTheme(themes.data);
   const status = useAsync(() => (theme ? loadThemeStatus(theme.id) : Promise.resolve(null)), [theme?.id]);
   const shopDomain = context.data?.shop.domain ?? window.shopify?.config?.shop ?? "";
   const apiKey = window.shopify?.config?.apiKey ?? "";
@@ -67,8 +85,7 @@ export function Sections() {
                         <s-badge>{t("Not added")}</s-badge>
                       )}
                     </s-stack>
-                    <s-paragraph>{t(info.description)}</s-paragraph>
-                    <s-text color="subdued">{t(TIPS[section.handle])}</s-text>
+                    <s-text color="subdued">{t(info.description)}</s-text>
                   </s-stack>
                   {theme && shopDomain && (
                     <s-button

@@ -1,5 +1,5 @@
 import { isColorOptionName } from "./product";
-import type { SplitBy } from "./settings";
+import { splitOptionName, type SplitBy } from "./settings";
 
 /**
  * Turning products into variant cards: which variants share a card, what the
@@ -62,28 +62,17 @@ export interface SplitOptions {
   hideNoImage: boolean;
 }
 
-/** Option positions that define a card, or null when the product stays one card. "all" = each variant. */
+const sameName = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
+
+/** Option positions that define a card, or null when the product stays one card. "each" = each variant. */
 export function splitIndexes(product: VcProduct, by: SplitBy): number[] | "each" | null {
-  const count = product.options.length;
-  if (product.variants.length < 2 || !count) return null;
-  switch (by) {
-    case "all":
-      return "each";
-    case "combined":
-      return count > 1 ? [0, 1] : [0];
-    case "option1":
-      return [0];
-    case "option2":
-      return count > 1 ? [1] : null;
-    case "option3":
-      return count > 2 ? [2] : null;
-    default: {
-      // Automatic: the color option. Products without one stay a single card
-      // (sizes of one color would all show the same image).
-      const color = product.options.findIndex((name) => isColorOptionName(name));
-      return color >= 0 ? [color] : null;
-    }
-  }
+  if (product.variants.length < 2 || !product.options.length) return null;
+  if (by === "all") return "each";
+  const name = splitOptionName(by);
+  // A named option, or else the color option. Products without it stay a single card
+  // (sizes of one color would all show the same image).
+  const index = name ? product.options.findIndex((option) => sameName(option, name)) : product.options.findIndex((option) => isColorOptionName(option));
+  return index >= 0 ? [index] : null;
 }
 
 function makeCard(product: VcProduct, variants: VcVariant[], label: string | null, key: string, split: boolean): VariantCard {

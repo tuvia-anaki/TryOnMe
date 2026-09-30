@@ -44,6 +44,29 @@ query ThemeFiles($id: ID!) {
   }
 }`;
 
+const THEME_KEY = "vc:theme";
+
+/** The theme the admin shows status for: the one picked on this computer, else the published one. */
+export function preferredTheme(themes: ThemeInfo[] | undefined): ThemeInfo | null {
+  if (!themes?.length) return null;
+  let id = "";
+  try {
+    id = localStorage.getItem(THEME_KEY) ?? "";
+  } catch {
+    /* storage blocked */
+  }
+  return themes.find((th) => th.id === id) ?? themes.find((th) => th.role === "MAIN") ?? themes[0];
+}
+
+export function setPreferredTheme(theme: ThemeInfo): void {
+  try {
+    if (theme.role === "MAIN") localStorage.removeItem(THEME_KEY);
+    else localStorage.setItem(THEME_KEY, theme.id);
+  } catch {
+    /* storage blocked: lasts until reload */
+  }
+}
+
 export async function listThemes(): Promise<ThemeInfo[]> {
   const data = await gql<{ themes: { nodes: ThemeInfo[] } }>(THEMES_QUERY);
   const order: Record<string, number> = { MAIN: 0, UNPUBLISHED: 1, DEVELOPMENT: 2 };

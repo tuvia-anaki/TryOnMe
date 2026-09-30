@@ -2,14 +2,15 @@
 
 A **100% free** Shopify app that shows every product variant as its own product card on collection and search pages — each color gets its own card with its own image, title, price and link. A free alternative to paid apps like *Stamp Show Variants Collection* ($12–$24/month).
 
-- **Variant cards** — split products by color (found automatically in any language) or by any option, "first + second option", or every variant. Cards reuse the theme's own card design, so they look native. Custom titles (`{product} - {value}`, `{vendor}`, `{option1}`…), price formats (theme / "From $X" / "$X – $Y"), sale prices and sold-out badges per variant.
+- **Variant cards** — one card per color (the color option is found automatically, in any language), per variant, or per value of any other option (Size, Material, Scent…). Cards reuse the theme's own card design, so they look native. Custom titles (`{product} - {value}`, `{vendor}`, `{option1}`…), price formats (theme / "From $X" / "$X – $Y"), sale prices and sold-out badges per variant.
 - **Where it runs** — all collections or the ones you choose, the all-products page, search results and (optionally) home page product grids. Works with the theme's filters, sorting and its own infinite scroll.
 - **Hide and sort** — hide sold-out variants or variants without their own image, mix variants of different products, sold-out cards last.
 - **Per-collection settings** — override anything for one collection, **drag-and-drop the order** of its variant cards, hide individual cards.
 - **Swatches on cards** — color dots (named colors in many languages, Shopify's own swatch colors, or tiny variant photos) or buttons, up to three option rows; hover previews on regular cards.
 - **Add to cart on cards**, **Load more / infinite scroll**, "back to top".
 - **Sections** for the theme editor — Featured collection, Best sellers, Hand-picked products, Related products (Shopify recommendations) and a **Promo card** placed inside the collection grid — all with variant cards, grid or carousel, and the theme's fonts and colors.
-- **Dashboard** — setup guide, theme picker, app embed and sections status with one-click "Add", emergency on/off switch.
+- **Home** — a 3-step setup guide, then one status line per theme ("Live on Dawn"), a pause switch, and a warning when another variant app is also on in the theme.
+- **Simple admin** — picture choices instead of jargon, the app's own dropdowns, Shopify's collection picker, rarely used settings behind "More settings", and Shopify's save bar only on form pages (Settings, Swatches, a collection) and only while there are unsaved changes.
 - **Admin in 19 languages** (follows the Shopify admin, with an in-app language picker); storefront texts in 30 languages, all editable.
 
 ## Why it can be free forever
@@ -98,5 +99,5 @@ window.VariantCards.refresh();                         // split cards added by o
 
 ## Data format
 
-Shop settings (`app.metafields.variant_cards.settings`, JSON): see `AppSettings` in `src/shared/settings.ts`.
+Shop settings (`app.metafields.variant_cards.settings`, JSON): see `AppSettings` in `src/shared/settings.ts`. `split.by` is `"auto"` (each color), `"all"` (each variant) or `"option:<name>"` (each value of the option with that name, e.g. `"option:Scent"`).
 Collection overrides (`collection.metafields['$app:variant_cards'].settings`, JSON): `CollectionSettings` — `null` fields follow the shop settings; `order` and `hidden` hold card keys like `"8123456789:Red"` (product id + split value) or `"8123456789"` (the whole product).

@@ -32,9 +32,10 @@ describe("splitting products into variant cards", () => {
   it("picks the option to split by", () => {
     const p = tee();
     expect(splitIndexes(p, "auto")).toEqual([1]);
-    expect(splitIndexes(p, "option1")).toEqual([0]);
-    expect(splitIndexes(p, "option3")).toBeNull();
-    expect(splitIndexes(p, "combined")).toEqual([0, 1]);
+    // A named option, whatever its position (names match without case or spaces mattering).
+    expect(splitIndexes(p, "option:Size")).toEqual([0]);
+    expect(splitIndexes(p, "option: size ")).toEqual([0]);
+    expect(splitIndexes(p, "option:Material")).toBeNull();
     expect(splitIndexes(p, "all")).toBe("each");
     expect(productCards(p, { ...base, by: "all" })).toHaveLength(4);
     // Automatic only splits by color: a sizes-only product stays one card.

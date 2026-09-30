@@ -3,10 +3,10 @@ import { msg, t } from "../i18n";
 import { navigate } from "../router";
 
 const CHECKLIST = [
-  msg("The app embed is on and the theme is saved (dashboard → App status)."),
+  msg("The app is on in your theme and the theme is saved (Home says “Live”)."),
   msg("The collection shows variant cards (Collections → the collection → “Show variant cards on this collection's page”)."),
-  msg("The products have a color option. Products without one stay as one card unless you split by another option (Settings → Split products by)."),
-  msg("You're looking at the published theme, or at the theme you picked on the dashboard (use its preview)."),
+  msg("The products have a color option. Products without one stay as one card, unless you pick another option (Settings → What gets its own card)."),
+  msg("You're looking at the published theme, or at the theme you picked on Home (use its preview)."),
   msg("Reload the collection page once: product data is cached for 10 minutes while you browse."),
 ];
 
@@ -65,10 +65,10 @@ export function Help() {
             ))}
           </s-ordered-list>
           <s-paragraph color="subdued">
-            {t("Still not working? Your theme may build its grid in an unusual way. Settings → Advanced → “Product card selector” lets you point the app at your cards.")}
+            {t("Still not working? Your theme may build its grid in an unusual way. Settings → More settings → “Product card selector” lets you point the app at your cards.")}
           </s-paragraph>
           <s-stack direction="inline" gap="small-200">
-            <s-button onClick={() => void navigate("/")}>{t("Open the dashboard")}</s-button>
+            <s-button onClick={() => void navigate("/")}>{t("Go to Home")}</s-button>
             <s-button variant="tertiary" onClick={() => void navigate("/settings")}>
               {t("Settings")}
             </s-button>

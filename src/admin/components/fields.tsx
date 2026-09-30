@@ -1,4 +1,5 @@
 import type { ComponentChildren } from "preact";
+import { Dropdown } from "./Dropdown";
 
 /** Thin wrappers around Polaris form fields with plain value callbacks. */
 
@@ -26,22 +27,29 @@ export function Check(props: { label: string; details?: string; checked: boolean
   );
 }
 
+/** A dropdown (the app's own, not the browser's): [value, label, optional second line]. */
 export function Select<T extends string>(props: {
   label: string;
+  labelHidden?: boolean;
   value: T;
-  options: [T, string][];
+  options: [T, string, string?][];
   details?: string;
   disabled?: boolean;
+  /** Show the chosen option's second line on the button too. */
+  showDescription?: boolean;
   onChange: (value: T) => void;
 }) {
   return (
-    <s-select label={props.label} value={props.value} details={props.details} disabled={props.disabled} onChange={(event) => props.onChange(event.currentTarget.value as T)}>
-      {props.options.map(([value, label]) => (
-        <s-option key={value} value={value}>
-          {label}
-        </s-option>
-      ))}
-    </s-select>
+    <Dropdown
+      label={props.label}
+      labelHidden={props.labelHidden}
+      showDescription={props.showDescription}
+      value={props.value}
+      options={props.options.map(([value, label, description]) => ({ value, label, description }))}
+      details={props.details}
+      disabled={props.disabled}
+      onChange={props.onChange}
+    />
   );
 }
 

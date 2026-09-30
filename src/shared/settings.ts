@@ -6,8 +6,12 @@
  */
 
 export type Shape = "circle" | "rounded" | "square";
-/** Which option becomes separate cards: "auto" = the color option (products without one stay one card). */
-export type SplitBy = "auto" | "option1" | "option2" | "option3" | "combined" | "all";
+/**
+ * What gets its own card: "auto" = each color (the color option, found in any language),
+ * "all" = each variant, "option:<name>" = each value of the option with that name
+ * (e.g. "option:Scent"). Products without that option stay one card.
+ */
+export type SplitBy = "auto" | "all" | `option:${string}`;
 /** How a card writes its price when its variants cost different amounts. */
 export type PriceFormat = "theme" | "from" | "range";
 export type PagingMode = "theme" | "load-more" | "infinite";
@@ -80,9 +84,6 @@ export interface AppSettings {
     /** Setup guide progress. */
     settingsSaved: boolean;
     previewed: boolean;
-    themeChecked: boolean;
-    /** The theme the dashboard checks (empty = the published theme). */
-    themeId: string;
   };
 }
 
@@ -131,7 +132,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   },
   texts: { from: "", soldOut: "", sale: "", addToCart: "", added: "", viewCart: "", loadMore: "", loading: "" },
   advanced: { preventFlash: true, gridSelector: "", cardSelector: "", customCss: "", customJs: "" },
-  admin: { settingsSaved: false, previewed: false, themeChecked: false, themeId: "" },
+  admin: { settingsSaved: false, previewed: false },
 };
 
 export const EMPTY_COLLECTION_SETTINGS: CollectionSettings = {
@@ -153,7 +154,6 @@ export const EMPTY_COLLECTION_SETTINGS: CollectionSettings = {
 /* ------------------------------------------------------------------ */
 
 const COLOR_RE = /^(#[0-9a-f]{3,8}|rgba?\([\d\s.,%]+\)|hsla?\([\d\s.,%deg]+\)|[a-z]{3,20})$/i;
-const SPLIT_BY = ["auto", "option1", "option2", "option3", "combined", "all"] as const;
 const PRICE_FORMATS = ["theme", "from", "range"] as const;
 
 const bool = (v: unknown, fallback: boolean): boolean => (typeof v === "boolean" ? v : fallback);
@@ -167,6 +167,22 @@ const text = (v: unknown, fallback: string, max: number): string => (typeof v ==
 const plain = (v: unknown, fallback: string, max = 80): string => text(v, fallback, max).replace(/[<>]/g, "");
 /** CSS selectors: no markup or Liquid. */
 const selector = (v: unknown): string => text(v, "", 300).replace(/[<>{}]/g, "");
+/** The option name of an "option:<name>" split, else null. */
+export function splitOptionName(by: SplitBy): string | null {
+  return by.startsWith("option:") ? by.slice(7) : null;
+}
+
+/** A valid SplitBy, or null. (Older versions split by option position; those become colors.) */
+function splitBy(v: unknown): SplitBy | null {
+  if (v === "auto" || v === "all") return v;
+  if (v === "option1" || v === "option2" || v === "option3" || v === "combined") return "auto";
+  if (typeof v === "string" && v.startsWith("option:")) {
+    const name = v.slice(7).replace(/[<>]/g, "").trim().slice(0, 60);
+    return name ? `option:${name}` : null;
+  }
+  return null;
+}
+
 const handleList = (v: unknown, max: number): string[] =>
   Array.isArray(v)
     ? [...new Set(v.filter((h): h is string => typeof h === "string" && /^[\p{L}\p{N}_-][\p{L}\p{N}_.-]{0,254}$/u.test(h)))].slice(0, max)
@@ -224,7 +240,7 @@ export function sanitizeSettings(raw: unknown): AppSettings {
     },
     split: {
       enabled: bool(sp.enabled, d.split.enabled),
-      by: oneOf(sp.by, SPLIT_BY, d.split.by),
+      by: splitBy(sp.by) ?? d.split.by,
       title: plain(sp.title, d.split.title, 120) || d.split.title,
     },
     price: { format: oneOf(src.price?.format, PRICE_FORMATS, d.price.format) },
@@ -275,8 +291,6 @@ export function sanitizeSettings(raw: unknown): AppSettings {
     admin: {
       settingsSaved: bool(ad.settingsSaved, d.admin.settingsSaved),
       previewed: bool(ad.previewed, d.admin.previewed),
-      themeChecked: bool(ad.themeChecked, d.admin.themeChecked),
-      themeId: typeof ad.themeId === "string" && /^gid:\/\/shopify\/OnlineStoreTheme\/\d+$/.test(ad.themeId) ? ad.themeId : "",
     },
   };
 }
@@ -289,7 +303,7 @@ export function sanitizeCollectionSettings(raw: unknown): CollectionSettings {
     v: 1,
     enabled: nullableBool(src.enabled),
     split: nullableBool(src.split),
-    by: typeof src.by === "string" && (SPLIT_BY as readonly string[]).includes(src.by) ? (src.by as SplitBy) : null,
+    by: splitBy(src.by),
     title: typeof src.title === "string" && src.title.trim() ? plain(src.title, "", 120) : null,
     price: typeof src.price === "string" && (PRICE_FORMATS as readonly string[]).includes(src.price) ? (src.price as PriceFormat) : null,
     hideSoldOut: nullableBool(src.hideSoldOut),

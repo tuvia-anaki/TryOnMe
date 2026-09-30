@@ -2,7 +2,8 @@ import type { AppSettings, Shape, SwatchSettings } from "../../shared/settings";
 import { backgroundFor, colorsFor, radiusFor, SWATCH_CSS } from "../../storefront/swatches";
 import { ColorMapEditor } from "../components/ColorMapEditor";
 import { ErrorBanner, Loading } from "../components/common";
-import { Card, NumberInput, Select, Toggle } from "../components/fields";
+import { Disclosure } from "../components/Disclosure";
+import { Card, Check, NumberInput, Select } from "../components/fields";
 import { t } from "../i18n";
 import { useSettingsDraft } from "../lib/draft";
 
@@ -45,6 +46,7 @@ function Preview({ settings }: { settings: AppSettings }) {
 }
 
 export function Swatches() {
+  // A form: saved with Shopify's save bar once something changes.
   const { context, draft, patch } = useSettingsDraft("vc-swatches-save-bar");
   if (context.error) {
     return (
@@ -65,96 +67,114 @@ export function Swatches() {
 
   return (
     <s-page heading={t("Swatches")} inlineSize="base">
-      <s-stack direction="block" gap="base">
-        <s-query-container>
-          <s-grid gridTemplateColumns="@container (inline-size <= 640px) 1fr, minmax(0, 1fr) 280px" gap="base" alignItems="start">
-            <s-stack direction="block" gap="base">
-              <Card heading={t("Swatches on product cards")} description={t("Color dots (or buttons) under each card on collection and search pages. On regular cards they preview each color's image; on variant cards they link to the other colors.")}>
-                <Toggle label={t("Show swatches on cards")} checked={s.enabled} onChange={(enabled) => set({ enabled })} />
-                <Select
-                  label={t("Options")}
-                  value={s.options}
-                  options={[
-                    ["color", t("Only the color option")],
-                    ["all", t("Every option (one row each, up to 3)")],
-                  ]}
-                  onChange={(options) => set({ options })}
-                />
-                <Select
-                  label={t("Style")}
-                  value={s.style}
-                  options={[
-                    ["auto", t("Color dots for colors, buttons for other options")],
-                    ["button", t("Buttons for every option")],
-                  ]}
-                  onChange={(style) => set({ style })}
-                />
-                <Select
-                  label={t("Color dots show")}
-                  value={s.source}
-                  options={[
-                    ["color", t("The color (from its name or your color list)")],
-                    ["image", t("A tiny photo of the variant")],
-                  ]}
-                  onChange={(source) => set({ source })}
-                />
-                <Select<"hover" | "click">
-                  label={t("On regular cards, show a color's image")}
-                  value={s.trigger}
-                  options={[
-                    ["hover", t("On hover")],
-                    ["click", t("On click")],
-                  ]}
-                  onChange={(trigger) => set({ trigger })}
-                />
-              </Card>
-              <Card heading={t("Look")}>
-                <s-grid gridTemplateColumns="@container (inline-size <= 480px) 1fr, 1fr 1fr" gap="base">
-                  <Select<Shape>
-                    label={t("Shape")}
-                    value={s.shape}
-                    options={[
-                      ["circle", t("Circle")],
-                      ["rounded", t("Rounded square")],
-                      ["square", t("Square")],
-                    ]}
-                    onChange={(shape) => set({ shape })}
-                  />
-                  <Select<"left" | "center" | "right">
-                    label={t("Alignment")}
-                    value={s.align}
-                    options={[
-                      ["left", t("Left")],
-                      ["center", t("Center")],
-                      ["right", t("Right")],
-                    ]}
-                    onChange={(align) => set({ align })}
-                  />
-                  <NumberInput label={t("Size")} value={s.size} min={12} max={48} suffix="px" onChange={(size) => set({ size })} />
-                  <NumberInput label={t("Swatches per row")} value={s.max} min={1} max={20} details={t("More show as “+3”.")} onChange={(max) => set({ max })} />
-                  <Select<"fade" | "cross" | "hide">
-                    label={t("Sold-out colors")}
-                    value={s.soldOut}
-                    options={[
-                      ["fade", t("Faded")],
-                      ["cross", t("Crossed out")],
-                      ["hide", t("Hidden")],
-                    ]}
-                    onChange={(soldOut) => set({ soldOut })}
-                  />
-                </s-grid>
-              </Card>
-              <Card heading={t("Colors")}>
-                <ColorMapEditor map={s.colorMap} onChange={(colorMap) => set({ colorMap })} />
-              </Card>
-            </s-stack>
-            <s-section heading={t("Preview")}>
-              <Preview settings={draft} />
-              {!s.enabled && <s-text color="subdued">{t("Swatches are off: turn them on to show them in your store.")}</s-text>}
-            </s-section>
-          </s-grid>
-        </s-query-container>
-      </s-stack>
+      <s-query-container>
+        <s-grid gridTemplateColumns="@container (inline-size <= 640px) 1fr, 1fr 260px" gap="base" alignItems="start">
+          <s-stack direction="block" gap="base">
+            <Card heading={t("Swatches on cards")}>
+              <Check
+                label={t("Show color swatches under each card")}
+                details={t("On collection and search pages. Shoppers click them to see the other colors.")}
+                checked={s.enabled}
+                onChange={(enabled) => set({ enabled })}
+              />
+            </Card>
+            {s.enabled && (
+              <>
+                <Card heading={t("What they show")}>
+                  <s-query-container>
+                    <s-grid gridTemplateColumns="@container (inline-size <= 480px) 1fr, 1fr 1fr" gap="base">
+                      <Select
+                        label={t("Options")}
+                        value={s.options}
+                        options={[
+                          ["color", t("Only colors")],
+                          ["all", t("All options"), t("One row each, up to 3")],
+                        ]}
+                        onChange={(options) => set({ options })}
+                      />
+                      <Select
+                        label={t("Style")}
+                        value={s.style}
+                        options={[
+                          ["auto", t("Dots for colors"), t("Buttons for other options")],
+                          ["button", t("Buttons only")],
+                        ]}
+                        onChange={(style) => set({ style })}
+                      />
+                      <Select
+                        label={t("Color dots show")}
+                        value={s.source}
+                        options={[
+                          ["color", t("The color"), t("From its name or your color list")],
+                          ["image", t("A tiny photo"), t("Of that color's variant")],
+                        ]}
+                        onChange={(source) => set({ source })}
+                      />
+                      <Select<"hover" | "click">
+                        label={t("Switch the photo on")}
+                        details={t("On cards that show a whole product.")}
+                        value={s.trigger}
+                        options={[
+                          ["hover", t("Hover")],
+                          ["click", t("Click")],
+                        ]}
+                        onChange={(trigger) => set({ trigger })}
+                      />
+                    </s-grid>
+                  </s-query-container>
+                </Card>
+                <Card heading={t("Look")}>
+                  <s-query-container>
+                    <s-grid gridTemplateColumns="@container (inline-size <= 480px) 1fr, 1fr 1fr" gap="base">
+                      <Select<Shape>
+                        label={t("Shape")}
+                        value={s.shape}
+                        options={[
+                          ["circle", t("Circle")],
+                          ["rounded", t("Rounded square")],
+                          ["square", t("Square")],
+                        ]}
+                        onChange={(shape) => set({ shape })}
+                      />
+                      <Select<"left" | "center" | "right">
+                        label={t("Alignment")}
+                        value={s.align}
+                        options={[
+                          ["left", t("Left")],
+                          ["center", t("Center")],
+                          ["right", t("Right")],
+                        ]}
+                        onChange={(align) => set({ align })}
+                      />
+                      <NumberInput label={t("Size")} value={s.size} min={12} max={48} suffix="px" onChange={(size) => set({ size })} />
+                      <NumberInput label={t("Swatches per row")} value={s.max} min={1} max={20} details={t("More show as “+3”.")} onChange={(max) => set({ max })} />
+                      <Select<"fade" | "cross" | "hide">
+                        label={t("Sold-out colors")}
+                        value={s.soldOut}
+                        options={[
+                          ["fade", t("Faded")],
+                          ["cross", t("Crossed out")],
+                          ["hide", t("Hidden")],
+                        ]}
+                        onChange={(soldOut) => set({ soldOut })}
+                      />
+                    </s-grid>
+                  </s-query-container>
+                </Card>
+                <Disclosure title={t("Color names")} summary={t("Teach the app names like “Ocean Mist”")} defaultOpen={Object.keys(s.colorMap).length > 0}>
+                  <s-section>
+                    <ColorMapEditor map={s.colorMap} onChange={(colorMap) => set({ colorMap })} />
+                  </s-section>
+                </Disclosure>
+              </>
+            )}
+          </s-stack>
+          <s-section heading={t("Preview")}>
+            <Preview settings={draft} />
+            {!s.enabled && <s-text color="subdued">{t("Turn swatches on to show them in your store.")}</s-text>}
+          </s-section>
+        </s-grid>
+      </s-query-container>
     </s-page>
   );
 }

@@ -52,7 +52,7 @@ export function App() {
       <s-page heading={t("Page not found")}>
         <s-section>
           <s-paragraph>{t("This page doesn't exist.")}</s-paragraph>
-          <s-button onClick={() => void navigate("/")}>{t("Go to the dashboard")}</s-button>
+          <s-button onClick={() => void navigate("/")}>{t("Go to Home")}</s-button>
         </s-section>
       </s-page>
     );
