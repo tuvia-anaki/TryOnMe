@@ -164,11 +164,18 @@ function productNode(p: MockProduct) {
   };
 }
 
-/** Theme files: the embed is on in the published theme when localStorage "vc-mock-embed" = "on". */
+/**
+ * Theme files: the embed is on in the published theme when localStorage "vc-mock-embed" = "on";
+ * another variant app's embed is on too when "vc-mock-other-app" = "on" (a variant image app always is).
+ */
 function themeFiles(themeId: number) {
   const embedOn = themeId === 1 && localStorage.getItem("vc-mock-embed") === "on";
   const embed = { type: `shopify://apps/${APP_HANDLE}/blocks/app-embed/0000`, disabled: !embedOn, settings: {} };
-  const settingsData = { current: { blocks: themeId === 1 && localStorage.getItem("vc-mock-embed") ? { e: embed } : {} } };
+  const others = {
+    o: { type: "shopify://apps/variants-on-collection/blocks/app-embed/0001", disabled: localStorage.getItem("vc-mock-other-app") !== "on", settings: {} },
+    g: { type: "shopify://apps/prism-variant-images/blocks/variant-images-embed/0002", disabled: false, settings: {} },
+  };
+  const settingsData = { current: { blocks: themeId === 1 ? { ...(localStorage.getItem("vc-mock-embed") ? { e: embed } : {}), ...others } : {} } };
   const index = {
     sections: {
       hero: { type: "image-banner", blocks: {} },

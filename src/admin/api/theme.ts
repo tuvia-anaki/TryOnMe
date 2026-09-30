@@ -22,6 +22,8 @@ export interface ThemeStatus {
   embed: EmbedState | "unknown";
   /** Section handle → templates it's placed on ("index", "product"…). */
   sections: Record<SectionHandle, string[]>;
+  /** Other variant or swatch apps switched on in the theme (their app handles). */
+  otherVariantApps: string[];
 }
 
 const THEMES_QUERY = `#graphql
@@ -77,6 +79,30 @@ export function embedStateFromSettings(settingsData: string, appHandle: string):
   return found ? "disabled" : "missing";
 }
 
+/**
+ * Other apps' embeds that are on and look like variant or swatch apps. Two apps
+ * changing the same product cards can show every variant twice. (Variant image
+ * apps only change the product page gallery, so they don't count.)
+ */
+export function otherVariantAppsFromSettings(settingsData: string, appHandle: string): string[] {
+  const blocks = parseThemeJson(settingsData)?.current?.blocks;
+  if (!blocks || typeof blocks !== "object") return [];
+  const found = new Set<string>();
+  for (const block of Object.values(blocks as Record<string, any>)) {
+    const m = typeof block?.type === "string" ? /^shopify:\/\/apps\/([^/]+)\/blocks\/([^/]+)\//.exec(block.type) : null;
+    if (!m || m[1] === appHandle || block.disabled === true) continue;
+    const name = `${m[1]} ${m[2]}`;
+    if (/variant|swatch/i.test(name) && !/image|gallery|photo/i.test(name)) found.add(m[1]);
+  }
+  return [...found];
+}
+
+/** "variants-on-collection" → "Variants on collection". */
+export function appNameFromHandle(handle: string): string {
+  const words = handle.replace(/-\d+$/, "").split(/[-_]+/).filter(Boolean).join(" ");
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
 /** Which of the app's sections a template (or section group) file contains. */
 export function sectionsInFile(content: string, appHandle: string): SectionHandle[] {
   const parsed = parseThemeJson(content);
@@ -100,17 +126,19 @@ export async function loadThemeStatus(themeId: string, appHandle: string): Promi
   if (!theme) throw new Error("Theme not found");
   const sections = Object.fromEntries(SECTIONS.map((s) => [s.handle, [] as string[]])) as Record<SectionHandle, string[]>;
   let embed: ThemeStatus["embed"] = "unknown";
+  let otherVariantApps: string[] = [];
   for (const file of theme.files?.nodes ?? []) {
     const content = file.body?.content;
     if (!content) continue;
     if (file.filename === "config/settings_data.json") {
       embed = embedStateFromSettings(content, appHandle);
+      otherVariantApps = otherVariantAppsFromSettings(content, appHandle);
       continue;
     }
     const where = file.filename.replace(/^(templates|sections)\//, "").replace(/\.json$/, "");
     for (const handle of sectionsInFile(content, appHandle)) sections[handle].push(where);
   }
-  return { theme: { id: theme.id, name: theme.name, role: theme.role, themeStoreId: theme.themeStoreId }, embed, sections };
+  return { theme: { id: theme.id, name: theme.name, role: theme.role, themeStoreId: theme.themeStoreId }, embed, sections, otherVariantApps };
 }
 
 const numericId = (gid: string) => gid.split("/").pop() ?? gid;
@@ -131,4 +159,9 @@ export function addSectionUrl(shopDomain: string, themeId: string, apiKey: strin
 
 export function themeEditorUrl(shopDomain: string, themeId: string, template = "collection"): string {
   return editorUrl(shopDomain, themeId, { template });
+}
+
+/** Opens the theme editor's App embeds list. */
+export function appEmbedsUrl(shopDomain: string, themeId: string): string {
+  return editorUrl(shopDomain, themeId, { context: "apps", template: "collection" });
 }

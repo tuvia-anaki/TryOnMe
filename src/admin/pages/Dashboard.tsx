@@ -4,7 +4,7 @@ import { SECTIONS, type SectionHandle } from "../../shared/constants";
 import { TITLE_PRESETS, type AppSettings, type SplitBy } from "../../shared/settings";
 import { testedThemeFor } from "../../shared/themes";
 import { listCollections, loadCounts } from "../api/collections";
-import { addSectionUrl, enableEmbedUrl, listThemes, loadThemeStatus, type ThemeInfo } from "../api/theme";
+import { addSectionUrl, appEmbedsUrl, appNameFromHandle, enableEmbedUrl, listThemes, loadThemeStatus, type ThemeInfo } from "../api/theme";
 import { ErrorBanner, openExternal } from "../components/common";
 import { Select, Toggle } from "../components/fields";
 import { LanguagePicker } from "../components/LanguagePicker";
@@ -102,6 +102,7 @@ export function Dashboard() {
   const apiKey = window.shopify?.config?.apiKey ?? "";
   const storeUrl = context.data?.shop.url ?? (shopDomain ? `https://${shopDomain}` : "");
   const embedOn = status.data?.embed === "enabled";
+  const otherApps = status.data?.otherVariantApps ?? [];
   const tested = theme ? testedThemeFor(theme.name) : null;
 
   if (context.error) {
@@ -271,6 +272,22 @@ export function Dashboard() {
           <s-banner tone="warning" heading={t("Variant Cards is switched off")}>
             <s-paragraph>{t("Your store shows the theme's normal product cards until you switch it back on.")}</s-paragraph>
             <s-button onClick={() => void save((s) => ({ ...s, enabled: true }))}>{t("Switch on")}</s-button>
+          </s-banner>
+        )}
+
+        {otherApps.length > 0 && (
+          <s-banner tone="warning" heading={t("Another variant app is on in this theme")}>
+            <s-paragraph>
+              {t("{apps} may change the same product cards, so variants can show twice. Turn it off in App embeds, then press Save.", {
+                apps: otherApps.map(appNameFromHandle).join(", "),
+              })}
+            </s-paragraph>
+            <s-stack direction="inline" gap="small-200">
+              <s-button onClick={() => theme && shopDomain && openExternal(appEmbedsUrl(shopDomain, theme.id))}>{t("Open App embeds")}</s-button>
+              <s-button variant="tertiary" onClick={status.reload}>
+                {t("Check again")}
+              </s-button>
+            </s-stack>
           </s-banner>
         )}
 

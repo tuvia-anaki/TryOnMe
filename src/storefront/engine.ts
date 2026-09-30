@@ -57,9 +57,14 @@ export class Engine {
   /** Split the cards of one grid (also used for cards appended by "Load more"). */
   async processGrid(grid: Grid): Promise<RenderedCard[]> {
     const { effective } = this.ctx;
-    const cards = grid.cards.filter((c) => c.el.isConnected && !c.el.hasAttribute(DONE_ATTR));
-    if (!cards.length) return [];
-    for (const c of cards) c.el.setAttribute(DONE_ATTR, "");
+    const fresh = grid.cards.filter((c) => c.el.isConnected && !c.el.hasAttribute(DONE_ATTR));
+    if (!fresh.length) return [];
+    for (const c of fresh) c.el.setAttribute(DONE_ATTR, "");
+    // A collection lists each product once, so a product with several cards is already shown
+    // per variant (by the theme or another app): leave those as they are, never split twice.
+    const count = new Map<string, number>();
+    for (const c of grid.cards) count.set(c.handle, (count.get(c.handle) ?? 0) + 1);
+    const cards = fresh.filter((c) => count.get(c.handle) === 1);
     const products = await Promise.all(cards.map((c) => loadProduct(c.handle, this.ctx.root)));
 
     const managed: { source: ThemeCard; product: VcProduct; cards: VariantCard[] }[] = [];

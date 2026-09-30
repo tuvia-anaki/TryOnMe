@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { testedThemeFor } from "../src/shared/themes";
-import { embedStateFromSettings, sectionsInFile } from "../src/admin/api/theme";
+import { appNameFromHandle, embedStateFromSettings, otherVariantAppsFromSettings, sectionsInFile } from "../src/admin/api/theme";
 
 const APP = "tryon-69";
 const block = (app: string, handle: string, extra: Record<string, unknown> = {}) => ({ type: `shopify://apps/${app}/blocks/${handle}/9827b57a-d8a6-43e3-9ddb-91a8f657d85a`, settings: {}, ...extra });
@@ -14,6 +14,24 @@ describe("theme status", () => {
     // Another app's embed with the same block name doesn't count.
     expect(embedStateFromSettings(data({ a: block("other-app", "app-embed") }), APP)).toBe("missing");
     expect(embedStateFromSettings("not json", APP)).toBe("missing");
+  });
+
+  it("finds other variant apps that are on in the theme", () => {
+    const data = JSON.stringify({
+      current: {
+        blocks: {
+          a: block(APP, "app-embed"),
+          b: block("variants-on-collection", "app-embed"),
+          c: block("color-swatch-king", "swatches", { disabled: true }),
+          d: block("prism-variant-images", "variant-images-embed"),
+          e: block("reviews-app", "stars"),
+        },
+      },
+    });
+    expect(otherVariantAppsFromSettings(data, APP)).toEqual(["variants-on-collection"]);
+    expect(otherVariantAppsFromSettings("not json", APP)).toEqual([]);
+    expect(appNameFromHandle("variants-on-collection")).toBe("Variants on collection");
+    expect(appNameFromHandle("tryon-69")).toBe("Tryon");
   });
 
   it("finds the app's sections in templates", () => {
