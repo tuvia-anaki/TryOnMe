@@ -66,6 +66,7 @@ export function Dashboard() {
     );
   }
   const s = draft;
+  const collectionsOn = s.collections.mode === "all" || s.collections.handles.length > 0;
 
   const shopDomain = context.data?.shop.domain ?? window.shopify?.config?.shop ?? "";
   const apiKey = window.shopify?.config?.apiKey ?? "";
@@ -221,7 +222,18 @@ export function Dashboard() {
             }
             description={t("Shoppers pick a color or style right on the card.")}
           />
-          <LinkCard to="/collections" icon="collections" title={t("Collections")} description={t("Change the order of cards in a collection, or hide some.")} />
+          <LinkCard
+            to="/collections"
+            icon="collections"
+            title={t("Collections")}
+            tag={
+              // On while any collection shows variant cards (with this page's choices, before saving too).
+              <Tag tone={collectionsOn ? "success" : undefined} dot>
+                {collectionsOn ? t("On") : t("Off")}
+              </Tag>
+            }
+            description={t("Change the order of cards in a collection, or hide some.")}
+          />
           <LinkCard to="/settings" icon="settings" title={t("More settings")} description={t("Card titles, sold-out cards, prices and more.")} />
           <LinkCard to="/help" icon="help" title={t("Help")} description={t("How it works, and what to do if cards don't show.")} />
         </div>
