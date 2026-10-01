@@ -5,35 +5,56 @@
 
 **App name:** Variant Cards: Show Variants (28 characters)
 
-**App card subtitle:** Show each variant as its own product on collection pages — free for every store
+**App card subtitle (≤62 chars):** Show variants on collection page as products, with swatches
 
 **App introduction (≤100 chars):**
-Every color, material or scent gets its own card on your collection pages, so shoppers see your whole range at a glance.
+Show variants on collection pages as separate products, with variant swatches on every card.
 
 **App details (≤500 chars):**
-Show each variant — each color, material, scent or any option you pick — as its own product card on collection and search pages, with its own image, title, price and link, in your theme's own card design. Add swatches so shoppers pick a color right on the card, choose the collections, hide sold-out variants, and set a manual card order per collection. Works with your theme's filters and sorting. Every feature is free.
+Show variants as separate products on your collection and search pages. Each color, material or scent gets its own card with its own photo, title and link, in your theme’s own design, while sizes stay together. Add swatches so shoppers switch variants on the card itself. Choose which collections, hide sold-out variants, and drag cards into your own order per collection. Works with your theme’s filters and sorting. No code, no duplicate products, and you can pause anytime.
 
 **Feature list (≤80 chars each):**
-- Show each style (color, material, scent…) or any option as its own card on collection pages
-- Works with your theme's cards, filters and sorting — no code
-- Custom titles and price ranges; hide sold-out or image-less variants
-- Swatches: shoppers pick a color right on the product card
-- Drag-and-drop card order per collection
-- Pause in one click; no theme code changes
-- Free for all stores: unlimited collections, no plans
+- Show variants as separate products on collection and search pages
+- Variant swatches on every card: color or photo, round or square, 3 sizes
+- Each color, material or scent gets its own card, while sizes stay together
+- Drag-and-drop card order and hidden cards for each collection
+- Hide sold-out variants or show them last; works with your filters and sorting
 
 **Pricing:** Free
 
 **Categories:** Product variants (Selling products) · Collections (Store design)
 
-**Search terms:** show variants, variants on collection, split variants, color variants, collection page
+**Search terms (5, ≤20 chars each):** show variants, split variants, separate variants, variants as products, color swatches
 
-## Test instructions for reviewers
+## Test instructions for reviewers (≤2800 chars)
 
-1. Open the app: Home says whether the app is on in the theme.
-2. "Turn on in theme editor" opens the theme editor with the "Variant Cards" app embed turned on — press Save.
-3. Open any collection with products that have a color option: each color shows as its own card.
-4. On Home, change what gets its own card, the card title or where cards show, then press Save; open a collection under "Your collections" to reorder or hide its cards; More settings has sold-out, price and advanced options.
+No login, account or billing needed: the app is free.
+
+Setup
+1. Install the app. It opens on Home.
+2. On Home, click "Turn on in theme editor". The theme editor opens with the "Variant Cards" app embed turned on. Click Save, go back to the app and click "Check again". Home shows "Live on [theme]".
+3. You need a product with variants. If the store has none, create "Test Tee" with option Color (Red, Blue, Green) and Size (S, M), give each color its own image, and make it available on the Online Store.
+
+Main feature: one card per variant
+4. On Home, click "Preview store" (enter the store password if there is one). On /collections/all, each color is its own product card ("Test Tee - Red", "Test Tee - Blue"...) with its own image, price and link (?variant=...). Sizes stay together on one card.
+5. On Home, under "What gets its own card", choose "Pick an option" > Size, or "One card per product". Click Save in the save bar and reload the storefront page.
+
+Swatches
+6. Home > Swatches: turn on "Swatches on product cards", pick Color or Photo, Round or Square and a size (the preview uses the store's products), then Save.
+7. On the storefront, swatches show under each card. Clicking one switches that card's photo, title, price and link without leaving the page.
+
+Per collection
+8. Home > Collections > open a collection. Drag cards to reorder them, or point at a card to use its up/down/Hide buttons, then Save. The storefront collection shows the new order without the hidden cards. The switch at the top turns variant cards off for that collection only.
+
+Other settings
+9. More settings: card title, price format, card order, hide sold-out cards, "Sold out" badge, search results and home page grids.
+10. Home > Pause > confirm: the storefront goes back to the theme's normal cards. "Turn back on" restores them.
+
+Notes
+- Access scopes: read_products (products and collections for the admin preview and card order), write_products (only to save per-collection card order in an app-owned collection metafield; products are never changed), read_themes (to check whether the app embed is on).
+- Settings are stored in app-owned metafields. The storefront script reads Shopify's own product data and sends nothing to an app server. No customer data is used.
+- If you edit a product after viewing the storefront, open a new tab: product data is cached in the browser for 10 minutes.
+- The chat bubble in the admin is our support chat (Tidio).
 
 ## Screenshots (ideas)
 
