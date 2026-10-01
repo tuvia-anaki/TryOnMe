@@ -173,6 +173,7 @@ function patchTitle(el: Element, card: VariantCard, template: string): void {
 
 export function sizedImage(src: string, width: number): string {
   const url = src.startsWith("//") ? `https:${src}` : src;
+  if (!/^https?:/i.test(url)) return url;
   try {
     const u = new URL(url);
     u.searchParams.set("width", String(width));

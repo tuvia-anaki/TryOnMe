@@ -194,7 +194,7 @@ function handle(query: string, variables: Json): Json {
     case "AppContext":
       return {
         currentAppInstallation: { id: "gid://shopify/AppInstallation/1", settings: store.appSettings ? { value: store.appSettings, updatedAt: "" } : null },
-        shop: { name: "Demo store", myshopifyDomain: "demo-store.myshopify.com", primaryDomain: { url: "https://demo-store.myshopify.com" } },
+        shop: { name: "Demo store", myshopifyDomain: "demo-store.myshopify.com", primaryDomain: { url: "https://demo-store.myshopify.com" }, currencyCode: "USD" },
       };
     case "SaveSettings": {
       const [m] = variables.metafields;
@@ -248,6 +248,8 @@ function handle(query: string, variables: Json): Json {
       persist(store);
       return { metafieldsDelete: { deletedMetafields: [{ key: "settings" }], userErrors: [] } };
     }
+    case "SwatchSamples":
+      return { products: { nodes: store.products.slice(0, 25).map(productNode) } };
     case "OptionNames":
       return { products: { nodes: store.products.slice(0, 50).map((p) => ({ options: p.options.map((name, i) => ({ name, optionValues: [...new Set(p.variants.map((v) => v.options[i]))].map((value) => ({ name: value })) })) })) } };
     case "CollectionsByHandle": {

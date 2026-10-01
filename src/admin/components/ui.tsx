@@ -92,6 +92,52 @@ export function ToggleRow(props: { title: string; description?: string; checked:
   );
 }
 
+/** A few choices side by side ("Round | Square"), a radio group: arrow keys move the choice. */
+export function Segmented<T extends string>(props: { label: string; value: T; options: { value: T; label: string }[]; details?: string; onChange: (value: T) => void }) {
+  const id = useId();
+  const pick = (index: number, focus: boolean, group: HTMLElement | null) => {
+    const option = props.options[(index + props.options.length) % props.options.length];
+    props.onChange(option.value);
+    if (focus) group?.querySelectorAll<HTMLElement>("[role=radio]")[props.options.indexOf(option)]?.focus();
+  };
+  return (
+    <div class="vc-segmented-field">
+      <span id={id} class="vc-field__label">
+        {props.label}
+      </span>
+      <div class="vc-segmented" role="radiogroup" aria-labelledby={id}>
+        {props.options.map((option, index) => {
+          const checked = option.value === props.value;
+          return (
+            <button
+              key={option.value}
+              type="button"
+              role="radio"
+              aria-checked={checked}
+              tabIndex={checked ? 0 : -1}
+              class={`vc-segmented__option${checked ? " is-selected" : ""}`}
+              onClick={() => props.onChange(option.value)}
+              onKeyDown={(event) => {
+                const group = (event.currentTarget as HTMLElement).parentElement;
+                if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+                  event.preventDefault();
+                  pick(index + 1, true, group);
+                } else if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+                  event.preventDefault();
+                  pick(index - 1, true, group);
+                }
+              }}
+            >
+              {option.label}
+            </button>
+          );
+        })}
+      </div>
+      {props.details && <span class="vc-field__details">{props.details}</span>}
+    </div>
+  );
+}
+
 /** Switches in one box, under an optional small label. */
 export function ToggleList(props: { label?: string; children: ComponentChildren }) {
   return (

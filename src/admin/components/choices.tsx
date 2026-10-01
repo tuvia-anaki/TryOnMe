@@ -78,7 +78,7 @@ export function SplitPicker(props: { enabled: boolean; by: SplitBy; labelHidden?
             visual: <SplitVisual kind="style" />,
           },
           { value: "option", title: t("Pick an option"), description: t("Split by one option you choose, like Scent or Size."), visual: <SplitVisual kind="option" /> },
-          { value: "none", title: t("One card per product"), description: t("Like your theme. Add swatches to pick colors on the card."), visual: <SplitVisual kind="none" /> },
+          { value: "none", title: t("One card per product"), description: t("Like your theme. Add swatches to pick variants on the card."), visual: <SplitVisual kind="none" /> },
         ]}
       />
       {picked === "option" && (

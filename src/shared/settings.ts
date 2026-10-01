@@ -15,6 +15,17 @@ export type SplitBy = "auto" | "all" | `option:${string}`;
 /** How a card writes its price when its variants cost different amounts. */
 export type PriceFormat = "theme" | "from" | "range";
 
+/** What a swatch shows (each falls back to the other): the color in the variant's name, or its photo. */
+export type SwatchLook = "color" | "photo";
+export type SwatchShape = "round" | "square";
+export type SwatchSize = "small" | "medium" | "large";
+export interface SwatchSettings {
+  enabled: boolean;
+  look: SwatchLook;
+  shape: SwatchShape;
+  size: SwatchSize;
+}
+
 /** Storefront texts, in the store's language (from the theme app extension's locales). */
 export interface Texts {
   /** "From {price}" */
@@ -35,8 +46,8 @@ export interface AppSettings {
   hide: { soldOut: boolean; noImage: boolean };
   order: { mix: boolean; soldOutLast: boolean };
   card: { soldOutBadge: boolean };
-  /** Swatches under each card: shoppers pick a color (or style) right on the card. */
-  swatches: { enabled: boolean };
+  /** Swatches under each card: shoppers pick a variant right on the card. */
+  swatches: SwatchSettings;
   advanced: {
     /** Hide the product grid until cards are split, to avoid a flash of the original cards. */
     preventFlash: boolean;
@@ -73,7 +84,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   hide: { soldOut: false, noImage: false },
   order: { mix: false, soldOutLast: false },
   card: { soldOutBadge: true },
-  swatches: { enabled: false },
+  swatches: { enabled: false, look: "color", shape: "round", size: "medium" },
   advanced: { preventFlash: true, gridSelector: "", cardSelector: "", customCss: "" },
   admin: { settingsSaved: false, previewed: false },
 };
@@ -161,7 +172,12 @@ export function sanitizeSettings(raw: unknown): AppSettings {
     hide: { soldOut: bool(h.soldOut, d.hide.soldOut), noImage: bool(h.noImage, d.hide.noImage) },
     order: { mix: bool(o.mix, d.order.mix), soldOutLast: bool(o.soldOutLast, d.order.soldOutLast) },
     card: { soldOutBadge: bool(cd.soldOutBadge, d.card.soldOutBadge) },
-    swatches: { enabled: bool(sw.enabled, d.swatches.enabled) },
+    swatches: {
+      enabled: bool(sw.enabled, d.swatches.enabled),
+      look: oneOf(sw.look, ["color", "photo"] as const, d.swatches.look),
+      shape: oneOf(sw.shape, ["round", "square"] as const, d.swatches.shape),
+      size: oneOf(sw.size, ["small", "medium", "large"] as const, d.swatches.size),
+    },
     advanced: {
       preventFlash: bool(a.preventFlash, d.advanced.preventFlash),
       gridSelector: selector(a.gridSelector),

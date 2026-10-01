@@ -68,6 +68,24 @@ query CollectionProducts($id: ID!, $after: String) {
   }
 }`;
 
+const SAMPLES_QUERY = `#graphql
+query SwatchSamples {
+  products(first: 25, sortKey: UPDATED_AT, reverse: true, query: "status:active") {
+    nodes {
+      id title handle vendor productType
+      featuredMedia { preview { image { url(transform: { maxWidth: 480 }) } } }
+      options(first: 3) { name }
+      variants(first: 50) {
+        nodes {
+          id title availableForSale price compareAtPrice
+          selectedOptions { name value }
+          image { url(transform: { maxWidth: 480 }) }
+        }
+      }
+    }
+  }
+}`;
+
 const SAVE_MUTATION = `#graphql
 mutation SaveCollectionSettings($metafields: [MetafieldsSetInput!]!) {
   metafieldsSet(metafields: $metafields) {
@@ -201,7 +219,17 @@ export async function loadCollectionProducts(id: number, max = 200, onProgress?:
   return { products, truncated: false };
 }
 
-/** Save a collection's overrides (or remove them when nothing is overridden). */
+/** The store's recently updated active products (for previews), asked once per visit. */
+let samples: Promise<VcProduct[]> | null = null;
+export function loadSampleProducts(): Promise<VcProduct[]> {
+  samples ??= gql<{ products: { nodes: ProductNode[] } }>(SAMPLES_QUERY).then((data) => data.products.nodes.map(toProduct));
+  samples.catch(() => {
+    samples = null;
+  });
+  return samples;
+}
+
+/** Save a collection's settings (or remove them when there's nothing of its own). */
 export async function saveCollectionSettings(collectionGid: string, settings: CollectionSettings): Promise<void> {
   const clean = sanitizeCollectionSettings(settings);
   if (isDefaultCollectionSettings(clean)) {

@@ -12,7 +12,7 @@ export interface AppContext {
   installationId: string;
   settings: AppSettings;
   settingsSaved: boolean;
-  shop: { name: string; domain: string; url: string | null };
+  shop: { name: string; domain: string; url: string | null; currency: string };
 }
 
 const CONTEXT_QUERY = `#graphql
@@ -21,7 +21,7 @@ query AppContext {
     id
     settings: metafield(namespace: "${SETTINGS_NAMESPACE}", key: "${SETTINGS_KEY}") { value updatedAt }
   }
-  shop { name myshopifyDomain primaryDomain { url } }
+  shop { name myshopifyDomain primaryDomain { url } currencyCode }
 }`;
 
 const SAVE_MUTATION = `#graphql
@@ -38,7 +38,7 @@ export function loadAppContext(force = false): Promise<AppContext> {
   if (!cached || force) {
     cached = gql<{
       currentAppInstallation: { id: string; settings: { value: string } | null };
-      shop: { name: string; myshopifyDomain: string; primaryDomain: { url: string } | null };
+      shop: { name: string; myshopifyDomain: string; primaryDomain: { url: string } | null; currencyCode: string };
     }>(CONTEXT_QUERY).then((data) => ({
       installationId: data.currentAppInstallation.id,
       settings: sanitizeSettings(data.currentAppInstallation.settings?.value ?? null),
@@ -47,6 +47,7 @@ export function loadAppContext(force = false): Promise<AppContext> {
         name: data.shop.name,
         domain: data.shop.myshopifyDomain,
         url: data.shop.primaryDomain?.url ?? null,
+        currency: data.shop.currencyCode,
       },
     }));
     cached.catch(() => {

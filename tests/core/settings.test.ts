@@ -27,8 +27,9 @@ describe("settings", () => {
   });
 
   it("swatches are off until turned on; removed options are dropped", () => {
-    expect(sanitizeSettings({}).swatches).toEqual({ enabled: false });
-    expect(sanitizeSettings({ swatches: { enabled: true } }).swatches.enabled).toBe(true);
+    expect(sanitizeSettings({}).swatches).toEqual({ enabled: false, look: "color", shape: "round", size: "medium" });
+    expect(sanitizeSettings({ swatches: { enabled: true, look: "photo", shape: "square", size: "large" } }).swatches).toEqual({ enabled: true, look: "photo", shape: "square", size: "large" });
+    expect(sanitizeSettings({ swatches: { enabled: true, look: "glitter", size: 99 } }).swatches).toMatchObject({ look: "color", size: "medium" });
     expect(sanitizeSettings({ card: { secondImage: true, hideThemeSwatches: false, soldOutBadge: false } }).card).toEqual({ soldOutBadge: false });
   });
 });

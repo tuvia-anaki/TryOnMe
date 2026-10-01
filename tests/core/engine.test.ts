@@ -278,6 +278,19 @@ describe("engine", () => {
       expect(red.querySelector(".vc-badge")).toBeNull();
     });
 
+    it("draws them the way the shop chose: colors or photos, round or square, small to large", async () => {
+      const chips = (el: Element) => buttons(el).map((b) => (b.querySelector("span") as HTMLElement).style);
+      const [byColor] = await setup({});
+      expect(chips(byColor).map((c) => c.background)).toEqual(["#d0312d", "#1f4fd1", "#2e8b3a"]);
+      const host = byColor.querySelector("vc-swatches") as HTMLElement;
+      expect([host.style.getPropertyValue("--vc-size"), host.style.getPropertyValue("--vc-radius")]).toEqual(["28px", "50%"]);
+      // Photos: each variant's own photo, sized for the swatch.
+      const [byPhoto] = await setup({ swatches: { enabled: true, look: "photo", shape: "square", size: "large" } });
+      expect(chips(byPhoto).map((c) => c.backgroundImage)).toEqual(["red", "blue", "green"].map((c) => `url("https://cdn/${c}.jpg?width=108")`));
+      const square = byPhoto.querySelector("vc-swatches") as HTMLElement;
+      expect([square.style.getPropertyValue("--vc-size"), square.style.getPropertyValue("--vc-radius")]).toEqual(["36px", "9px"]);
+    });
+
     it("hides sold-out colors when sold-out cards are hidden", async () => {
       const [red, blue] = await setup({ hide: { soldOut: true } });
       expect(buttons(red).map((b) => b.title)).toEqual(["Red", "Blue"]);

@@ -4,7 +4,8 @@ import { findGrids, loadProduct, mainScope, UI_ATTR, type Grid, type ThemeCard }
 import type { PageContext } from "./context";
 import { copyCard, DONE_ATTR, HIDDEN_ATTR, renderCard, type RenderContext } from "./patch";
 import { revealWhenVisible } from "./reveal";
-import { renderSwatches, swatchSet } from "./swatches";
+import { swatchSet } from "../shared/swatches";
+import { renderSwatches } from "./swatches";
 
 export interface RenderedCard {
   el: Element;
@@ -181,7 +182,7 @@ export class Engine {
     const render = card.split ? this.render : { ...this.render, effective: { ...this.render.effective, title: "{product}" } };
     const url = `${this.ctx.root}products/${encodeURIComponent(card.product.handle)}`;
     let showing = card.key;
-    const row = renderSwatches(el, set, url, (swatch) => {
+    const row = renderSwatches(el, set, url, this.ctx.settings.swatches, (swatch) => {
       if (swatch.card.key === showing) return;
       showing = swatch.card.key;
       renderCard(el, swatch.card, render);

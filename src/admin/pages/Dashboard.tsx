@@ -22,7 +22,7 @@ function liveSentence(settings: AppSettings): string {
   const kind = splitKind(settings.split.enabled, settings.split.by);
   if (kind === "none") {
     return settings.swatches.enabled
-      ? t("Shoppers see one card per product and pick colors with swatches.")
+      ? t("Shoppers see one card per product and pick variants with swatches.")
       : t("Cards aren't split right now. Choose what gets its own card below.");
   }
   if (kind === "variant") return t("Shoppers see a card for each variant on your collection pages.");
