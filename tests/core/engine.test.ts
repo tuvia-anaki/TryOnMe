@@ -217,6 +217,112 @@ describe("engine", () => {
     }
   });
 
+  describe("a collection with one product", () => {
+    const fetchProducts = () =>
+      vi.stubGlobal("fetch", async (url: string) => {
+        const handle = /\/products\/([^/?#]+)\.js/.exec(String(url))![1];
+        return new Response(JSON.stringify(product(handle.length * 7, handle)));
+      });
+    const split = (selector: string) => Array.from(document.querySelectorAll(`${selector} [data-vc-card]`)).map((el) => el.getAttribute("data-vc-card"));
+
+    it("splits its only product, not the product slider below it", async () => {
+      // No second card to show where a card ends: the list item it sits in does.
+      // The collection's description above the grid links to the product too.
+      document.body.innerHTML = `<main><div id="shopify-section-template--1__main"><div class="wrap"><p class="description">See our <a href="/products/solo">solo</a>.</p><ul class="grid">${card("solo")}</ul><nav class="pagination"></nav></div></div><div id="shopify-section-template--1__related"><ul class="slider">${card("r1")}${card("r2")}</ul></div></main>`;
+      fetchProducts();
+      await new Engine(context()).run();
+      expect(split("#shopify-section-template--1__main")).toEqual(["28:Red", "28:Blue"]);
+      expect(document.querySelectorAll("#shopify-section-template--1__main ul.grid > li")).toHaveLength(2);
+      expect(split("#shopify-section-template--1__related")).toEqual([]);
+    });
+
+    it("finds the card by its width when the grid isn't a list (Creative)", async () => {
+      // A grid column is much narrower than the grid; the card's own parts aren't.
+      const original = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "offsetWidth");
+      const widths = new Map<string, number>([["cards", 900], ["item", 300], ["product-card", 290], ["link", 290]]);
+      Object.defineProperty(HTMLElement.prototype, "offsetWidth", {
+        configurable: true,
+        get(this: HTMLElement) {
+          return widths.get(this.dataset.w ?? "") ?? 0;
+        },
+      });
+      try {
+        document.body.innerHTML = `<main><div id="shopify-section-template--1__product-grid"><div class="collection__cards" data-w="cards"><div class="o-layout__item" data-w="item"><product-card class="product-card product-card--trigger-icon" data-w="product-card"><a href="/products/solo" data-w="link"><img src="/cdn/solo.jpg" alt=""></a><h3>solo</h3><span class="price">$25.00</span></product-card></div></div></div></main>`;
+        fetchProducts();
+        await new Engine(context()).run();
+        expect(Array.from(document.querySelectorAll(".collection__cards > *")).map((el) => `${el.className} ${el.getAttribute("data-vc-card")}`)).toEqual([
+          "o-layout__item 28:Red",
+          "o-layout__item 28:Blue",
+        ]);
+      } finally {
+        if (original) Object.defineProperty(HTMLElement.prototype, "offsetWidth", original);
+        else delete (HTMLElement.prototype as { offsetWidth?: number }).offsetWidth;
+      }
+    });
+
+    it("leaves a lone product on the home page alone (a Featured product section isn't a grid)", async () => {
+      document.body.innerHTML = `<main><div id="shopify-section-template--1__main"><ul class="grid">${card("solo")}</ul></div></main>`;
+      fetchProducts();
+      const ctx = context({ pages: { allProducts: true, search: true, home: true } });
+      await new Engine({ ...ctx, template: "index" }).run();
+      expect(split("main")).toEqual([]);
+    });
+  });
+
+  describe("the card's photo", () => {
+    // Red and Blue, each with its own photo.
+    const photos = (id: number, handle: string) => {
+      const p = product(id, handle);
+      return { ...p, featured_image: `//cdn/${handle}-main.jpg`, variants: p.variants.map((v) => ({ ...v, featured_image: { src: `//cdn/${handle}-${v.title.toLowerCase()}.jpg` } })) };
+    };
+    const run = async (themeCard: (handle: string) => string) => {
+      document.body.innerHTML = `<main><div class="grid">${themeCard("pen")}${themeCard("clip")}</div></main>`;
+      vi.stubGlobal("fetch", async (url: string) => {
+        const handle = /\/products\/([^/?#]+)\.js/.exec(String(url))![1];
+        return new Response(JSON.stringify(photos(handle.length, handle)));
+      });
+      const engine = new Engine(context());
+      const [grid] = engine.grids();
+      return engine.processGrid(grid);
+    };
+
+    it("is the photo shoppers see, even when the theme puts the hover photo first (Creative)", async () => {
+      // The card is a <product-card> with the modifier "product-card--trigger-icon": still the card, not an icon.
+      const creative = (handle: string) =>
+        `<div class="o-layout__item"><product-card class="product-card product-card--trigger-icon product-card--hover-image"><a href="/products/${handle}" class="product-card__link"><div class="product-card__media product-card__media--hover-image"><product-card-secondary-image-placeholder class="product-card__img-hover hover-enabled"><img class="product-card__img-hover hover-enabled" src="/cdn/${handle}-hover.jpg" alt=""></product-card-secondary-image-placeholder><img class="product-card__img hover-enabled" src="/cdn/${handle}-main.jpg" alt="" product-card-image></div></a><h3>${handle}</h3><span class="price">$25.00</span></product-card></div>`;
+      const rendered = await run(creative);
+      expect(rendered.map((r) => r.card.key)).toEqual(["3:Red", "3:Blue", "4:Red", "4:Blue"]);
+      for (const { el, card } of rendered) {
+        const main = el.querySelector("img.product-card__img")!;
+        expect(main.getAttribute("src"), card.key).toContain(`${card.product.handle}-${card.label!.toLowerCase()}.jpg`);
+        expect(main.hasAttribute("data-vc-hidden"), card.key).toBe(false);
+        // The hover photo would show another color.
+        expect(el.querySelector("img.product-card__img-hover")!.hasAttribute("data-vc-hidden"), card.key).toBe(true);
+      }
+    });
+
+    it("is never a <noscript> fallback, even when the real photo is still waiting to fade in (Showcase)", async () => {
+      // Showcase's infinite scroll parses fetched cards, which turns the <noscript> image into a real one.
+      const card = (handle: string) =>
+        `<div class="product-block"><a href="/products/${handle}" class="image-inner"><div class="image__first"><img class="rimage__image lazyload fade-in" style="opacity: 0" data-src="/cdn/${handle}-main_{width}x.jpg" alt=""><noscript><img class="rimage__image" src="/cdn/${handle}-main.jpg" alt=""></noscript></div></a><h3>${handle}</h3><span class="price">$25.00</span></div>`;
+      const rendered = await run(card);
+      for (const { el, card } of rendered) {
+        expect(el.querySelector("img.lazyload")!.getAttribute("data-src"), card.key).toContain(`${card.product.handle}-${card.label!.toLowerCase()}.jpg`);
+        expect(el.querySelector("img.lazyload")!.hasAttribute("data-vc-hidden"), card.key).toBe(false);
+      }
+    });
+
+    it("is the visible one when nothing in the names tells", async () => {
+      const card = (handle: string) =>
+        `<div class="item"><a href="/products/${handle}"><span class="a" style="opacity: 0"><img src="/cdn/${handle}-2.jpg" alt=""></span><span class="b"><img src="/cdn/${handle}-main.jpg" alt=""></span></a><h3>${handle}</h3><span class="price">$25.00</span></div>`;
+      const rendered = await run(card);
+      for (const { el, card } of rendered) {
+        expect(el.querySelector(".b img")!.getAttribute("src"), card.key).toContain(`${card.product.handle}-${card.label!.toLowerCase()}.jpg`);
+        expect(el.querySelector(".a img")!.hasAttribute("data-vc-hidden"), card.key).toBe(true);
+      }
+    });
+  });
+
   describe("swatches", () => {
     // A tee in three colors, each with its own photo; Green is sold out. The product photo is Blue's.
     const tee = () => ({

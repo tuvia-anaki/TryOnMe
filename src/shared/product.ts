@@ -20,7 +20,8 @@ export function isColorOptionName(name: string): boolean {
 /** Option names that mean "size" in common store languages. */
 export const SIZE_OPTION_NAMES = [
   "size", "sizes", "sizing", "taille", "tailles", "große", "grosse", "groesse", "talla", "tallas", "tamano",
-  "tamanho", "tamanhos", "taglia", "taglie", "maat", "maten", "storlek", "størrelse", "storrelse", "koko",
+  "tamanho", "tamanhos", "taglia", "taglie", "maat", "maten", "formaat", "afmeting", "afmetingen", "abmessung", "abmessungen",
+  "dimension", "dimensions", "storlek", "størrelse", "storrelse", "koko",
   "rozmiar", "velikost", "beden", "numara", "marime", "meret", "ukuran", "kich thuoc", "kich co", "размер",
   "розмір", "מידה", "مقاس", "サイズ", "尺码", "尺碼", "尺寸", "사이즈", "크기", "ขนาด",
 ];

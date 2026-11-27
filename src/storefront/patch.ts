@@ -216,14 +216,74 @@ export function swapImage(img: HTMLImageElement, src: string): void {
 }
 
 /**
- * Images that aren't the product photo: swatches, badges, icons… A gallery is never one of
- * them, even with a "badge" modifier (Horizon themes: "card-gallery--badge-top-left").
+ * Is `node` something other than the product photo: a swatch, badge, icon, logo, rating? Told
+ * by its class names, but not by BEM modifiers: "product-card--trigger-icon" (Creative) is the
+ * whole card, "card-gallery--badge-top-left" (Horizon) the gallery. A gallery is never one,
+ * and neither is anything around the card's title or price, whatever its classes say.
  */
-const GALLERY = ":not([class*='gallery' i]):not([class*='media' i])";
-const NOT_PRODUCT_IMAGE = `[class*='swatch' i], [class*='badge' i]${GALLERY}, [class*='icon' i]${GALLERY}, [class*='logo' i], [class*='vendor' i], [class*='rating' i], [${UI_ATTR}]`;
+function isDecoration(node: Element): boolean {
+  if (node.hasAttribute(UI_ATTR)) return true;
+  const classes = Array.from(node.classList);
+  const gallery = classes.some((name) => /gallery|media/i.test(name));
+  const names = [...classes.map((name) => name.split("--")[0]), node.tagName.includes("-") ? node.tagName : ""];
+  if (!names.some((name) => /swatch|logo|vendor|rating/i.test(name) || (!gallery && /badge|icon/i.test(name)))) return false;
+  return !node.querySelector(`h2, h3, h4, ${PRICE_SCOPE}`);
+}
 
 export function productImages(el: Element): HTMLImageElement[] {
-  return Array.from(el.querySelectorAll<HTMLImageElement>("img")).filter((img) => !within(img, NOT_PRODUCT_IMAGE, el));
+  return Array.from(el.querySelectorAll<HTMLImageElement>("img")).filter((img) => {
+    // A <noscript> fallback is never shown (themes that parse fetched cards turn it into a real <img>).
+    if (img.closest("noscript, template")) return false;
+    for (let node: Element | null = img; node && node !== el; node = node.parentElement) if (isDecoration(node)) return false;
+    return true;
+  });
+}
+
+/** The card's photo, chosen once on the theme's own card (copies inherit the mark). */
+const MAIN_ATTR = "data-vc-main";
+/** Names of a second photo shown on hover ("product-card__img-hover", "secondary-image"…). */
+const HOVER_PHOTO = /secondary|second[-_]?(img|image|media|photo)|(img|image|media|photo)[-_]+(hover|second|alt)|hover[-_]+(img|image|media|photo)|alt[-_]?image/i;
+
+/**
+ * Which photo shoppers see: the one the theme's styles show while nobody hovers (a hover photo
+ * is invisible until then, and some themes put it first), else the one not named like a hover
+ * photo, else the first. Only the part of the card below all photos counts, so a card that's
+ * still waiting to fade in doesn't hide them all.
+ */
+function mainImage(el: Element, images: HTMLImageElement[]): HTMLImageElement | undefined {
+  const marked = images.find((img) => img.hasAttribute(MAIN_ATTR));
+  if (marked || images.length < 2) return marked ?? images[0];
+  let group: Element | null = images[0].parentElement;
+  while (group && group !== el && !images.every((img) => group!.contains(img))) group = group.parentElement;
+  const view = el.ownerDocument.defaultView;
+  const groupHidden = view && group?.isConnected ? view.getComputedStyle(group).visibility === "hidden" : false;
+  const below = (img: HTMLImageElement) => {
+    const nodes: Element[] = [];
+    for (let node: Element | null = img; node && node !== group && node !== el; node = node.parentElement) nodes.push(node);
+    return nodes;
+  };
+  // A photo that hasn't loaded yet is often invisible only until it fades in (lazy loading):
+  // then its own opacity says nothing, its wrappers' still do.
+  const loaded = (img: HTMLImageElement) => img.complete && img.naturalWidth > 0;
+  const hidden = (img: HTMLImageElement) =>
+    !!view &&
+    img.isConnected &&
+    below(img).some((node) => {
+      const style = view.getComputedStyle(node);
+      if (style.display === "none") return true;
+      if (node === img && !loaded(img)) return false;
+      return (style.opacity !== "" && Number(style.opacity) < 0.05) || (!groupHidden && style.visibility === "hidden");
+    });
+  const named = (img: HTMLImageElement) => below(img).some((node) => HOVER_PHOTO.test(node.getAttribute("class") ?? "") || HOVER_PHOTO.test(node.tagName));
+  const rank = (img: HTMLImageElement) => (hidden(img) ? 2 : 0) + (named(img) ? 1 : 0);
+  return images.reduce((best, img) => (rank(img) < rank(best) ? img : best));
+}
+
+/** Mark the photo of a theme's card before it's copied or changed. */
+export function markMainImage(el: Element): void {
+  const images = productImages(el);
+  if (images.length < 2 || images.some((img) => img.hasAttribute(MAIN_ATTR))) return;
+  mainImage(el, images)?.setAttribute(MAIN_ATTR, "");
 }
 
 function patchImages(el: Element, card: VariantCard): void {
@@ -234,8 +294,9 @@ function patchImages(el: Element, card: VariantCard): void {
   // Themes that render every product image with its media id (sliders): show the variant's first.
   if (card.ownImage && card.mediaId) {
     const id = card.mediaId;
-    const target = Array.from(el.querySelectorAll(`[slide-id="${id}"], [data-media-id="${id}"], [data-image-id="${id}"], [data-media="${id}"]`)).find(
-      (node) => !within(node, NOT_PRODUCT_IMAGE, el) && (node.matches("img, picture") || !!node.querySelector("img, picture")),
+    const photos = productImages(el);
+    const target = Array.from(el.querySelectorAll(`[slide-id="${id}"], [data-media-id="${id}"], [data-image-id="${id}"], [data-media="${id}"]`)).find((node) =>
+      photos.some((img) => node === img || node.contains(img)),
     );
     if (target) {
       let slide: Element = target;
@@ -256,7 +317,7 @@ function patchImages(el: Element, card: VariantCard): void {
     }
   }
   const images = productImages(el);
-  const main = images[0];
+  const main = mainImage(el, images);
   if (!main) return;
   swapImage(main, image);
   // The theme's hover image would show another variant.

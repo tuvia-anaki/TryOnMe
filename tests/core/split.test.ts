@@ -84,7 +84,8 @@ describe("splitting products into variant cards", () => {
   });
 
   it("recognizes size options in common store languages", () => {
-    for (const name of ["Size", "Shoe size", "Size (EU)", "Taille", "Größe", "Tamaño", "Størrelse", "サイズ", "尺码", "Kích thước"]) expect(isSizeOptionName(name), name).toBe(true);
+    for (const name of ["Size", "Shoe size", "Size (EU)", "Taille", "Größe", "Tamaño", "Størrelse", "サイズ", "尺码", "Kích thước", "Formaat", "Keuze afmeting", "Dimensions"])
+      expect(isSizeOptionName(name), name).toBe(true);
     for (const name of ["Color", "Material", "Scent", "Sized pack", "Style"]) expect(isSizeOptionName(name), name).toBe(false);
   });
 

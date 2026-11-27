@@ -10,7 +10,9 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const CHROME = process.env.CHROME ?? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
-const PORT = 9333;
+// Other ports (VC_CHROME_PORT, VC_PROXY_PORT) let two checks run side by side.
+const PORT = Number(process.env.VC_CHROME_PORT || 9333);
+const PROXY = Number(process.env.VC_PROXY_PORT || 4600);
 /** Theme demo stores (theme → store). */
 const DEMOS = {
   "atelier": "theme-atelier-demo.myshopify.com",
@@ -54,7 +56,7 @@ const themes = only.length ? only : Object.keys(DEMOS);
 
 const chrome = spawn(CHROME, ["--headless=new", `--remote-debugging-port=${PORT}`, `--user-data-dir=${mkdtempSync(join(tmpdir(), "vc-audit-"))}`, "--window-size=1280,900", "--no-first-run", "--no-default-browser-check", "about:blank"], { stdio: "ignore" });
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const proxy = spawn(process.execPath, [fileURLToPath(new URL("./proxy.mjs", import.meta.url))], { env: { ...process.env, PORT: "4600" }, stdio: "ignore" });
+const proxy = spawn(process.execPath, [fileURLToPath(new URL("./proxy.mjs", import.meta.url))], { env: { ...process.env, PORT: String(PROXY) }, stdio: "ignore" });
 await sleep(800);
 
 async function target() {
@@ -93,13 +95,14 @@ await send("Runtime.enable");
 const results = [];
 for (const arg of themes) {
   // "dawn" or "dawn@/search?q=shirt" (another page of that demo store).
+  // A store's own domain works too ("shop.example.com@/collections/sale"), e.g. to reproduce a merchant's report.
   const [theme, path = "/collections/all"] = arg.split("@");
-  const host = DEMOS[theme];
+  const host = DEMOS[theme] ?? (theme.includes(".") ? theme : undefined);
   if (!host) continue;
   events.length = 0;
   // VC_SETTINGS='{"swatches":{"enabled":true}}' checks with those app settings.
   const settings = process.env.VC_SETTINGS ? `&settings=${encodeURIComponent(process.env.VC_SETTINGS)}` : "";
-  await send("Page.navigate", { url: `http://localhost:4600/__demo/${host}?to=${encodeURIComponent(path)}${settings}` });
+  await send("Page.navigate", { url: `http://localhost:${PROXY}/__demo/${host}?to=${encodeURIComponent(path)}${settings}` });
   // Wait for the collection page's load event, then give the theme and the app time to run.
   const start = Date.now();
   while (Date.now() - start < 30000 && !events.some((e) => e.method === "Page.loadEventFired" && Date.now() - start > 1500)) await sleep(250);

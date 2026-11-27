@@ -105,4 +105,4 @@ createServer((req, res) => {
     if (!res.headersSent) send(res, 500, "Internal error");
     else res.destroy();
   });
-}).listen(PORT, "0.0.0.0", () => console.log(`Prism Variant Images admin on port ${PORT}`));
+}).listen(PORT, "0.0.0.0", () => console.log(`Variant Cards admin on port ${PORT}`));

@@ -21,6 +21,41 @@ export interface ThemeCard {
 export interface Grid {
   parent: Element;
   cards: ThemeCard[];
+  /** One product alone in its section (a collection with one product, a search with one result). */
+  lone?: boolean;
+}
+
+/** A theme section: cards never reach past one (two sections with one product each aren't a grid). */
+const SECTION = "[id^='shopify-section-'], .shopify-section";
+const CARD_IMAGE = "img, picture, [data-src], [data-bgset], [style*='background-image']";
+
+function layoutWidth(el: Element): number {
+  return el instanceof HTMLElement ? el.offsetWidth : el.getBoundingClientRect().width;
+}
+
+/**
+ * The card of a product that's alone in its section, where there are no neighbouring cards to
+ * tell where a card ends. Inside `top` (everything around the product in its section), the card
+ * is the outermost element that's still clearly narrower than its parent (a grid column), or
+ * else the list item it sits in. Null when neither says.
+ */
+function loneCard(link: Element, top: Element): Element | null {
+  let base: Element | null = link;
+  while (base && base !== top && !base.querySelector(CARD_IMAGE)) base = base.parentElement;
+  if (!base || !base.querySelector(CARD_IMAGE)) return null;
+  let width = layoutWidth(base);
+  if (width > 0) {
+    for (let card = base; card !== top && card.parentElement; card = card.parentElement) {
+      const parentWidth = layoutWidth(card.parentElement);
+      if (parentWidth >= width * 1.5) return card;
+      width = Math.max(width, parentWidth);
+    }
+  }
+  let item: Element | null = null;
+  for (let node: Element | null = base; node && node !== top.parentElement; node = node.parentElement) {
+    if (node.tagName === "LI" && /^(UL|OL)$/.test(node.parentElement?.tagName ?? "")) item = node;
+  }
+  return item;
 }
 
 export function handleFromHref(href: string | null, origin = window.location.origin): string | null {
@@ -46,9 +81,12 @@ function productLinks(scope: ParentNode): { el: Element; handle: string }[] {
   return out;
 }
 
-/** Cards grouped into grids (parents with 2+ cards), largest grid first. */
-export function findGrids(scope: Element, options: { cardSelector?: string; processed?: string } = {}): Grid[] {
-  const cards: ThemeCard[] = [];
+/**
+ * Cards grouped into grids (parents with 2+ cards), largest grid first. With `lone`, also a
+ * product that's alone in its section, as a grid of one card.
+ */
+export function findGrids(scope: Element, options: { cardSelector?: string; processed?: string; lone?: boolean } = {}): Grid[] {
+  const cards: (ThemeCard & { lone?: boolean })[] = [];
   if (options.cardSelector) {
     for (const el of Array.from(scope.querySelectorAll(options.cardSelector))) {
       if (el.closest(EXCLUDE)) continue;
@@ -70,19 +108,32 @@ export function findGrids(scope: Element, options: { cardSelector?: string; proc
       }
     }
     const seen = new Set<Element>();
+    /** Per section with a lone product: the card found from its links (the one holding most of them). */
+    const lone = new Map<Element, { el: Element; handle: string; links: number }>();
     for (const { el, handle } of links) {
       let node = el;
-      while (node.parentElement && node.parentElement !== scope && under.get(node.parentElement)?.size === 1) node = node.parentElement;
+      while (node.parentElement && node.parentElement !== scope && !node.parentElement.matches(SECTION) && under.get(node.parentElement)?.size === 1) node = node.parentElement;
+      const parent = node.parentElement;
+      if (!parent) continue;
+      if ((under.get(parent)?.size ?? 0) < 2) {
+        // Nothing else in its section: the product is alone (or the link isn't in a grid at all).
+        // Every link is tried: one in the collection's description above the grid finds no card.
+        const card = options.lone && parent.matches(SECTION) ? loneCard(el, node) : null;
+        if (card) {
+          const count = links.filter((link) => link.handle === handle && card.contains(link.el)).length;
+          if (count > (lone.get(node)?.links ?? 0)) lone.set(node, { el: card, handle, links: count });
+        }
+        continue;
+      }
       if (seen.has(node)) continue;
       seen.add(node);
-      const parent = node.parentElement;
-      if (!parent || (under.get(parent)?.size ?? 0) < 2) continue;
       // Real product cards show an image (or will, once lazy loading kicks in).
-      if (!node.querySelector("img, picture, [data-src], [data-bgset], [style*='background-image']")) continue;
+      if (!node.querySelector(CARD_IMAGE)) continue;
       cards.push({ el: node, handle });
     }
+    for (const { el, handle } of lone.values()) cards.push({ el, handle, lone: true });
   }
-  const byParent = new Map<Element, ThemeCard[]>();
+  const byParent = new Map<Element, (ThemeCard & { lone?: boolean })[]>();
   for (const card of cards) {
     if (options.processed && card.el.hasAttribute(options.processed)) continue;
     const parent = card.el.parentElement;
@@ -92,8 +143,8 @@ export function findGrids(scope: Element, options: { cardSelector?: string; proc
     else byParent.set(parent, [card]);
   }
   return [...byParent]
-    .filter(([, list]) => list.length >= 2 || options.cardSelector)
-    .map(([parent, list]) => ({ parent, cards: list }))
+    .filter(([, list]) => list.length >= 2 || options.cardSelector || list[0].lone)
+    .map(([parent, list]) => ({ parent, cards: list.map(({ el, handle }) => ({ el, handle })), ...(list[0].lone ? { lone: true } : {}) }))
     .sort((a, b) => b.cards.length - a.cards.length);
 }
 

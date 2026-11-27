@@ -2,8 +2,8 @@
  * Shopify webhook handling with Web Crypto only, so the same code runs on
  * Cloudflare Workers, Deno, Bun, Node 20+ and in the Vite dev server.
  *
- * The app stores no customer data (variant image setups live in the
- * merchant's own store as product metafields), so the mandatory compliance
+ * The app stores no customer data (its settings live in the merchant's own
+ * store as app and collection metafields), so the mandatory compliance
  * webhooks only need to be verified and acknowledged.
  */
 

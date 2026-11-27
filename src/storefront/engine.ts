@@ -2,7 +2,7 @@ import { findMoney, type MoneyPattern } from "../shared/money";
 import { arrangeCards, productCards, type VariantCard, type VcProduct } from "../shared/split";
 import { findGrids, loadProduct, mainScope, UI_ATTR, type Grid, type ThemeCard } from "./cards";
 import type { PageContext } from "./context";
-import { copyCard, DONE_ATTR, HIDDEN_ATTR, renderCard, type RenderContext } from "./patch";
+import { copyCard, DONE_ATTR, HIDDEN_ATTR, markMainImage, renderCard, type RenderContext } from "./patch";
 import { revealWhenVisible } from "./reveal";
 import { swatchSet } from "../shared/swatches";
 import { renderSwatches } from "./swatches";
@@ -81,11 +81,15 @@ export class Engine {
    */
   grids(scope: Element = mainScope()): Grid[] {
     const { gridSelector, cardSelector } = this.ctx.settings.advanced;
-    let grids = findGrids(scope, { cardSelector, processed: DONE_ATTR });
+    const home = this.ctx.template.split(".")[0] === "index";
+    // A collection page can list a single product (and a search find one): that card is split too.
+    // Never on the home page, where a lone product is a "Featured product" section, not a grid.
+    let grids = findGrids(scope, { cardSelector, processed: DONE_ATTR, lone: !home });
     if (gridSelector) grids = grids.filter((g) => g.parent.matches(gridSelector) || !!g.parent.closest(gridSelector));
-    if (this.ctx.template.split(".")[0] === "index") return grids;
+    if (home) return grids;
     if (this.mainGrid === undefined) {
-      const main = grids.find((g) => MAIN_SECTION.test(sectionOf(g.parent) ?? "")) ?? grids[0];
+      // A lone product counts only in the template's own section (never one in a product slider below).
+      const main = grids.find((g) => MAIN_SECTION.test(sectionOf(g.parent) ?? "")) ?? grids.find((g) => !g.lone);
       if (!main) return [];
       this.mainGrid = signatureOf(main.parent);
       this.mainGrids.add(main.parent);
@@ -145,7 +149,9 @@ export class Engine {
     for (const m of managed) for (const card of m.cards) sourceOf.set(card, m.source);
 
     // The theme's own card becomes the product's first card; the others are copies of the
-    // card as the theme drew it (taken before the first card is changed).
+    // card as the theme drew it (taken before the first card is changed, with its photo marked
+    // while the theme's styles still tell it from the hover photo).
+    for (const m of managed) markMainImage(m.source.el);
     const pristine = new Map<Element, Element>();
     for (const m of managed) if (m.cards.length > 1) pristine.set(m.source.el, m.source.el.cloneNode(true) as Element);
     const used = new Set<Element>();

@@ -92,6 +92,7 @@ Real-browser check (needs Google Chrome and internet): loads Shopify's theme dem
 ```bash
 npm run test:browser                                # every theme demo
 node tests/browser/run.mjs dawn "horizon@/search?q=shirt"   # some themes / pages
+node tests/browser/run.mjs "shop.example.com@/collections/sale"   # a merchant's own store (to reproduce a report)
 ```
 
 ## Storefront events (for developers)

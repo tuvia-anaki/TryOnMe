@@ -69,6 +69,11 @@ createServer(async (req, res) => {
     if (type.includes("text/html") && !req.url.includes("sections=") && !req.url.includes("section_id=")) {
       let html = await upstream.text();
       html = html.replaceAll(`https://${demoHost}/`, "/").replaceAll(`//${demoHost}/`, "/");
+      // A store with the app on (a merchant's own store): the local build replaces the released one.
+      html = html
+        .replace(/<script type="application\/json" id="vc-config">[\s\S]*?<\/script>/g, "")
+        .replace(/<style id="vc-prehide">[\s\S]*?<\/style>\s*<script>\s*document\.documentElement\.classList\.add\('vc-pending'\)[\s\S]*?<\/script>/g, "")
+        .replace(/<script[^>]+vc-cards\.js[^>]*><\/script>/g, "");
       const inject = `<script type="application/json" id="vc-config">${JSON.stringify(config(html, settingsFrom(req)))}</script><script src="/__vc/vc-cards.js" defer></script>`;
       html = html.replace("</head>", `${inject}</head>`);
       // The test pane is a background tab, where IntersectionObserver never fires (no rendering). Report every
